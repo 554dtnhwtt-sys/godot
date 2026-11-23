@@ -12,7 +12,7 @@ func _init(r: String = "guld", s: float = 20.0) -> void:
 
 func _draw() -> void:
 	var c := size * 0.5
-	var r: float = min(size.x, size.y) * 0.42
+	var r: float = minf(size.x, size.y) * 0.42
 	var col: Color = Data.RESOURCE_COLORS.get(res, Color.WHITE)
 	match res:
 		"guld":

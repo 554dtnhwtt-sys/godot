@@ -15,7 +15,7 @@ func fire_cannonball(from: Vector2, target, dmg: float, owner: String, bld = nul
 		tship = target
 		tp = target.position
 	var dist := from.distance_to(tp)
-	var dur: float = clamp(dist / 520.0, 0.25, 1.2)
+	var dur: float = clampf(dist / 520.0, 0.25, 1.2)
 	if tship != null:
 		tp = tship.position + tship.velocity * (dur + delay) * 0.8
 	var spread := 5.0 + dist * 0.045
@@ -91,7 +91,7 @@ func _resolve(b: Dictionary) -> void:
 	for isl in world.islands:
 		if isl.contains_world_point(to):
 			if Game.at_war(owner, isl.owner_id):
-				isl.garrison = max(0.0, isl.garrison - b["dmg"] * 0.06)
+				isl.garrison = maxf(0.0, isl.garrison - b["dmg"] * 0.06)
 				isl.last_attacked = Game.time
 			dust(to)
 			return

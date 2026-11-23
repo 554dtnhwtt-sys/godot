@@ -41,7 +41,7 @@ func _draw() -> void:
 		var col := Color(0.95, 0.88, 0.65)
 		if isl.owner_id != "neutral":
 			col = Data.nation_color(isl.owner_id).lightened(0.15)
-		draw_circle(c, max(2.5, r), col)
+		draw_circle(c, maxf(2.5, r), col)
 	if world.fog and world.fog.tex:
 		draw_texture_rect(world.fog.tex, Rect2(Vector2.ZERO, size), false, Color(0.85, 0.88, 0.9, 1.0))
 	for s in world.ships:

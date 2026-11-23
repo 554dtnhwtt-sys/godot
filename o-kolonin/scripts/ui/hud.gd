@@ -121,13 +121,13 @@ func _on_speed(i: int) -> void:
 
 func _draw_wind() -> void:
 	var c := wind_ctl.size * 0.5
-	var r: float = min(c.x, c.y) - 2.0
+	var r: float = minf(c.x, c.y) - 2.0
 	wind_ctl.draw_circle(c, r, Color(0.15, 0.25, 0.3, 0.9))
 	wind_ctl.draw_arc(c, r, 0, TAU, 24, UITheme.BORDER, 1.5)
 	var dir := Vector2.from_angle(Game.wind_angle)
 	dir.y *= 0.72
 	dir = dir.normalized()
-	var len := r * (0.5 + 0.35 * clamp(Game.wind_strength - 0.6, 0.0, 1.0))
+	var len := r * (0.5 + 0.35 * clampf(Game.wind_strength - 0.6, 0.0, 1.0))
 	var tip := c + dir * len
 	var tail := c - dir * len
 	var col := Color(0.8, 0.95, 1.0) if Game.storm < 0.3 else Color(1, 0.5, 0.4)
@@ -338,7 +338,7 @@ func _build_ship_info() -> void:
 	info_box.add_child(hp_bar)
 	var stats := UITheme.label("", 14)
 	info_box.add_child(stats)
-	_dynamic.append(func():
+	var _upd1 := func():
 		var hp := 0.0
 		var mhp := 0.0
 		var tr := 0.0
@@ -352,22 +352,17 @@ func _build_ship_info() -> void:
 			tr += s.troops
 			cannons += s.def["cannons"]
 			order_txt = _order_text(s)
-		hp_bar.max_value = max(1.0, mhp)
+		hp_bar.max_value = maxf(1.0, mhp)
 		hp_bar.value = hp
 		var spd := ""
 		if world.selected_ships.size() > 0 and is_instance_valid(world.selected_ships[0]):
 			var s0 = world.selected_ships[0]
 			spd = "   Fart: %d%% (vind)" % int(s0.wind_factor(s0.heading) * 100.0)
-		stats.text = "Skrov %d/%d   Kanoner %d   Soldater %d%s\n%s" % [int(hp), int(mhp), cannons, int(tr), spd, order_txt])
+		stats.text = "Skrov %d/%d   Kanoner %d   Soldater %d%s\n%s" % [int(hp), int(mhp), cannons, int(tr), spd, order_txt]
+	_dynamic.append(_upd1)
 	var hb := HBoxContainer.new()
-	hb.add_child(UITheme.button("Stoppa", func():
-		for s in world.selected_ships:
-			s.stop(), 14))
-	hb.add_child(UITheme.button("Till hemön", func():
-		var home = world.island_by_id(Data.NATIONS[Game.player]["home"])
-		if home.owner_id == Game.player:
-			for s in world.selected_ships:
-				s.order_move(home.coast_point_towards(s.position, 90.0)), 14))
+	hb.add_child(UITheme.button("Stoppa", _stop_selected, 14))
+	hb.add_child(UITheme.button("Till hemön", _send_home, 14))
 	info_box.add_child(hb)
 	var hint := "Högerklick: segla, anfall skepp/ö, kolonisera obebodd ö."
 	for s in sel:
@@ -375,6 +370,18 @@ func _build_ship_info() -> void:
 			hint += "\nHandelsfartyg: lägg dig vid en egen ö och högerklicka på en annan egen ö för att starta en handelsrutt."
 			break
 	info_box.add_child(UITheme.wrap_label(hint, 13, UITheme.DIM))
+
+
+func _stop_selected() -> void:
+	for s in world.selected_ships:
+		s.stop()
+
+
+func _send_home() -> void:
+	var home = world.island_by_id(Data.NATIONS[Game.player]["home"])
+	if home.owner_id == Game.player:
+		for s in world.selected_ships:
+			s.order_move(home.coast_point_towards(s.position, 90.0))
 
 
 func _order_text(s) -> String:
@@ -397,11 +404,10 @@ func _build_foreign_ship(s) -> void:
 	var st := "I krig" if Game.at_war(Game.player, s.owner_id) else "Inte i krig"
 	var l := UITheme.label("", 15)
 	info_box.add_child(l)
-	_dynamic.append(func():
+	var _upd2 := func():
 		if is_instance_valid(s):
-			l.text = "Skrov %d/%d   Kanoner %d   %s" % [int(s.hp), int(s.max_hp), s.def["cannons"], st])
-
-
+			l.text = "Skrov %d/%d   Kanoner %d   %s" % [int(s.hp), int(s.max_hp), s.def["cannons"], st]
+	_dynamic.append(_upd2)
 func _build_island_info(isl) -> void:
 	var p := Game.player
 	var owner: String = isl.owner_id
@@ -426,7 +432,7 @@ func _build_island_info(isl) -> void:
 		return
 	var status := UITheme.label("", 14)
 	info_box.add_child(status)
-	_dynamic.append(func():
+	var _upd3 := func():
 		var t := "Garnison: %d / %d" % [int(isl.garrison), int(isl.max_garrison())]
 		if owner == p:
 			if isl.home_of == p:
@@ -438,7 +444,8 @@ func _build_island_info(isl) -> void:
 			t += "   Lediga platser: %d" % isl.free_slot_count()
 		elif Game.is_playable(owner):
 			t += "   Relation: %s (%d)" % [Game.STATUS_NAMES[Game.status(p, owner)], int(Game.get_rel(p, owner)["value"])]
-		status.text = t)
+		status.text = t
+	_dynamic.append(_upd3)
 	if owner != p:
 		if Game.is_playable(owner) and not Game.at_war(p, owner):
 			info_box.add_child(UITheme.wrap_label("Ni är inte i krig. Öppna Diplomati (P) för att förhandla eller förklara krig.", 13, UITheme.DIM))
@@ -459,7 +466,7 @@ func _build_island_info(isl) -> void:
 		var b := UITheme.button(def["name"], _on_build.bind(isl, type), 13)
 		b.custom_minimum_size = Vector2(144, 30)
 		grid.add_child(b)
-		_dynamic.append(func():
+		var _upd4 := func():
 			var unlocked := Game.building_unlocked(p, type)
 			var cost := Game.building_cost(p, type)
 			var tip := "%s\n%s\n\nKostnad: %s" % [def["name"], def["desc"], Data.cost_text(cost)]
@@ -477,7 +484,8 @@ func _build_island_info(isl) -> void:
 				tip += "\n\nIngen ledig plats" + (" vid kusten." if def.get("coastal", false) else ".")
 			b.tooltip_text = tip
 			b.disabled = not unlocked or not isl.can_build_type(type) or not Game.can_afford(p, cost)
-			b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6))
+			b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6)
+		_dynamic.append(_upd4)
 	# Byggnader på ön
 	var counts := {}
 	for bld in isl.buildings:
@@ -499,7 +507,7 @@ func _build_island_info(isl) -> void:
 			var b := UITheme.button(sd["name"], _on_ship.bind(isl, t), 13)
 			b.custom_minimum_size = Vector2(144, 30)
 			sg.add_child(b)
-			_dynamic.append(func():
+			var _upd5 := func():
 				var unlocked := Game.ship_unlocked(p, t)
 				var cost := Game.ship_cost(p, t)
 				var tip := "%s\n%s\n\nSkrov %d  Kanoner %d  Fart %d  Soldater %d\nByggtid: %d dagar\nKostnad: %s" % [sd["name"], sd["desc"], int(sd["hp"] * Game.mod(p, "ship_hp")), sd["cannons"], int(sd["speed"] * Game.mod(p, "ship_speed")), int(sd["troops"] * Game.mod(p, "troops")), int(sd["time"]), Data.cost_text(cost)]
@@ -507,19 +515,19 @@ func _build_island_info(isl) -> void:
 					tip += "\n\nKräver forskning: %s" % Data.RESEARCH[Data.SHIP_RESEARCH[t]]["name"]
 				b.tooltip_text = tip
 				b.disabled = not unlocked or not Game.can_afford(p, cost) or isl.ship_queue.size() >= 5
-				b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6))
+				b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6)
+			_dynamic.append(_upd5)
 		var q := UITheme.label("", 14)
 		info_box.add_child(q)
-		_dynamic.append(func():
+		var _upd6 := func():
 			if isl.ship_queue.is_empty():
 				q.text = "Kö: tom"
 			else:
 				var names: Array = []
 				for e in isl.ship_queue:
 					names.append(Data.SHIPS[e["type"]]["name"])
-				q.text = "Kö: %s  (nästa klar om %d dagar)" % [", ".join(names), int(ceil(isl.ship_queue[0]["left"]))])
-
-
+				q.text = "Kö: %s  (nästa klar om %d dagar)" % [", ".join(names), int(ceilf(isl.ship_queue[0]["left"]))]
+		_dynamic.append(_upd6)
 func _on_build(isl, type: String) -> void:
 	if world.build(Game.player, isl, type):
 		Game.say("Bygger %s på %s." % [Data.BUILDINGS[type]["name"].to_lower(), isl.display_name], Color(0.85, 0.85, 0.75))
@@ -539,7 +547,7 @@ func _refresh_dynamic() -> void:
 
 # ------------------------------------------------------------------ Uppdatering
 func _process(delta: float) -> void:
-	var real := delta / max(0.001, Engine.time_scale)
+	var real := delta / maxf(0.001, Engine.time_scale)
 	_refresh_t -= real
 	if _refresh_t <= 0.0:
 		_refresh_t = 0.25

@@ -20,7 +20,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var real_delta := delta / max(0.001, Engine.time_scale)
+	var real_delta := delta / maxf(0.001, Engine.time_scale)
 	var dir := Vector2.ZERO
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
 		dir.y -= 1
@@ -41,8 +41,8 @@ func _text_focus() -> bool:
 
 
 func _clamp() -> void:
-	position.x = clamp(position.x, 0.0, Data.WORLD_SIZE.x)
-	position.y = clamp(position.y, 0.0, Data.WORLD_SIZE.y)
+	position.x = clampf(position.x, 0.0, Data.WORLD_SIZE.x)
+	position.y = clampf(position.y, 0.0, Data.WORLD_SIZE.y)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -64,7 +64,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _zoom_at(factor: float, screen_pos: Vector2) -> void:
 	var before := get_global_mouse_position()
-	var z: float = clamp(zoom.x * factor, MIN_ZOOM, MAX_ZOOM)
+	var z: float = clampf(zoom.x * factor, MIN_ZOOM, MAX_ZOOM)
 	zoom = Vector2(z, z)
 	var after := get_global_mouse_position()
 	position += before - after

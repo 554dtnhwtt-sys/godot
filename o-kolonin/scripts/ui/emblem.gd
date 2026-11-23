@@ -28,7 +28,7 @@ func _draw() -> void:
 	draw_colored_polygon(shield, col)
 	var outline := shield.duplicate()
 	outline.append(shield[0])
-	draw_polyline(outline, acc, max(2.0, w * 0.035), true)
+	draw_polyline(outline, acc, maxf(2.0, w * 0.035), true)
 	var c := Vector2(w * 0.5, h * 0.45)
 	var r := w * 0.3
 	var emblem: String = Data.NATIONS[nation]["emblem"] if Data.NATIONS.has(nation) else ""

@@ -174,7 +174,7 @@ func add_res(nation: String, r: String, amount: float) -> void:
 	if not nations.has(nation):
 		return
 	var d: Dictionary = nations[nation]["res"]
-	d[r] = max(0.0, d.get(r, 0.0) + amount)
+	d[r] = maxf(0.0, d.get(r, 0.0) + amount)
 
 
 func can_afford(nation: String, cost: Dictionary) -> bool:
@@ -204,7 +204,7 @@ func building_cost(nation: String, type: String) -> Dictionary:
 	var f := mod(nation, "build_cost") * pow(Data.COST_GROWTH, count)
 	var out := {}
 	for r in base:
-		out[r] = ceil(base[r] * f)
+		out[r] = ceilf(base[r] * f)
 	return out
 
 
@@ -213,7 +213,7 @@ func ship_cost(nation: String, type: String) -> Dictionary:
 	var f := mod(nation, "ship_cost")
 	var out := {}
 	for r in base:
-		out[r] = ceil(base[r] * f)
+		out[r] = ceilf(base[r] * f)
 	return out
 
 
@@ -298,7 +298,7 @@ func tick_research(nation: String) -> void:
 		return
 	var cost: float = Data.research_cost(cur)
 	var bank: float = st["res"]["forskning"]
-	var take: float = min(bank, cost - st["research_progress"])
+	var take: float = minf(bank, cost - st["research_progress"])
 	st["research_progress"] += take
 	st["res"]["forskning"] = bank - take
 	if st["research_progress"] >= cost - 0.001:
@@ -341,7 +341,7 @@ func change_relation(a: String, b: String, delta: float) -> void:
 	var k := _key(a, b)
 	if not relations.has(k):
 		return
-	relations[k]["value"] = clamp(relations[k]["value"] + delta, -100.0, 100.0)
+	relations[k]["value"] = clampf(relations[k]["value"] + delta, -100.0, 100.0)
 	diplomacy_changed.emit()
 
 
@@ -404,7 +404,7 @@ func player_proposal(action: String, target: String, extra: String = "") -> Dict
 	var st: String = rel["status"]
 	var my_str := nation_strength(me)
 	var their_str := nation_strength(target)
-	var ratio := my_str / max(1.0, their_str)
+	var ratio := my_str / maxf(1.0, their_str)
 	var tname: String = Data.nation_short(target)
 	match action:
 		"krig":
@@ -466,7 +466,7 @@ func player_proposal(action: String, target: String, extra: String = "") -> Dict
 			return {"ok": true, "text": "%s blir mycket imponerade av de exotiska gåvorna." % tname}
 		"tribut":
 			if ratio >= 1.6:
-				var amount: float = floor(res(target, "guld") * 0.3)
+				var amount: float = floorf(res(target, "guld") * 0.3)
 				add_res(target, "guld", -amount)
 				add_res(me, "guld", amount)
 				change_relation(me, target, -25.0)
@@ -515,7 +515,7 @@ func answer_ai_proposal(data: Dictionary, accept: bool) -> void:
 			change_relation(player, from, 10.0)
 		"tribut_krav":
 			var amount: float = data.get("amount", 100.0)
-			add_res(player, "guld", -min(amount, res(player, "guld")))
+			add_res(player, "guld", -minf(amount, res(player, "guld")))
 			add_res(from, "guld", amount)
 			change_relation(player, from, 10.0)
 			resources_changed.emit()
@@ -544,17 +544,17 @@ func diplomacy_tick() -> void:
 		# Långsam drift: handel och allians förbättrar, krig försämrar.
 		match r["status"]:
 			"krig":
-				r["value"] = max(-100.0, r["value"] - 1.0)
+				r["value"] = maxf(-100.0, r["value"] - 1.0)
 			"handel":
-				r["value"] = min(100.0, r["value"] + 1.5)
+				r["value"] = minf(100.0, r["value"] + 1.5)
 			"allians":
-				r["value"] = min(100.0, r["value"] + 1.0)
+				r["value"] = minf(100.0, r["value"] + 1.0)
 			"fred":
 				r["value"] += (0.0 - r["value"]) * 0.02
 		# Gemensamma fiender för samman.
 		for c in alive:
 			if c != a and c != b and at_war(a, c) and at_war(b, c):
-				r["value"] = min(100.0, r["value"] + 1.0)
+				r["value"] = minf(100.0, r["value"] + 1.0)
 	# AI-beslut
 	for a in alive:
 		if not nations[a]["ai"]:
@@ -570,7 +570,7 @@ func _ai_decide(a: String, b: String) -> void:
 	var r := get_rel(a, b)
 	var v: float = r["value"]
 	var st: String = r["status"]
-	var ratio := nation_strength(a) / max(1.0, nation_strength(b))
+	var ratio := nation_strength(a) / maxf(1.0, nation_strength(b))
 	var since: float = time - float(r["since"])
 	var is_player := b == player
 	if st == "krig":
@@ -591,7 +591,7 @@ func _ai_decide(a: String, b: String) -> void:
 			return
 	# Tributkrav mot spelaren om AI:n är mycket starkare.
 	if is_player and st == "fred" and ratio > 2.0 and v < 0.0 and randf() < 0.04 * ai_aggro():
-		var amount: float = floor(max(50.0, res(player, "guld") * 0.25))
+		var amount: float = floorf(maxf(50.0, res(player, "guld") * 0.25))
 		_ask_player(a, "tribut_krav", "%s kräver %d guld i tribut. Vägrar du kan det bli krig." % [Data.nation_short(a), int(amount)], {"amount": amount})
 		return
 	# Handel och allianser

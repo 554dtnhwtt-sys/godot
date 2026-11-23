@@ -220,7 +220,7 @@ func _process(delta: float) -> void:
 
 
 func _map_scale() -> float:
-	return min(_map.size.x / Data.WORLD_SIZE.x, _map.size.y / Data.WORLD_SIZE.y)
+	return minf(_map.size.x / Data.WORLD_SIZE.x, _map.size.y / Data.WORLD_SIZE.y)
 
 
 func _map_offset() -> Vector2:

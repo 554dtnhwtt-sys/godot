@@ -27,11 +27,11 @@ func day_tick() -> void:
 func _storm_tick() -> void:
 	if storm_left > 0:
 		storm_left -= 1
-		Game.storm = min(1.0, Game.storm + 0.2)
+		Game.storm = minf(1.0, Game.storm + 0.2)
 		if storm_left == 0:
 			Game.say("Stormen har bedarrat.", Color(0.8, 0.9, 1))
 	else:
-		Game.storm = max(0.0, Game.storm - 0.15)
+		Game.storm = maxf(0.0, Game.storm - 0.15)
 
 
 func start_storm(days: int) -> void:
@@ -106,8 +106,8 @@ func _edge_point_near(p: Vector2) -> Vector2:
 	var dir := (best - p).normalized()
 	if best.distance_to(p) < 900.0:
 		best = p + dir * 900.0
-	best.x = clamp(best.x, 60.0, w.x - 60.0)
-	best.y = clamp(best.y, 60.0, w.y - 60.0)
+	best.x = clampf(best.x, 60.0, w.x - 60.0)
+	best.y = clampf(best.y, 60.0, w.y - 60.0)
 	return best
 
 

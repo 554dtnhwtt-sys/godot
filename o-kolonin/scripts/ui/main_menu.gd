@@ -104,7 +104,7 @@ func _draw_deco() -> void:
 	_deco.draw_colored_polygon(PackedVector2Array([sp + Vector2(-80, 0), sp + Vector2(80, 0), sp + Vector2(60, 26), sp + Vector2(-64, 26)]), Color(0.35, 0.22, 0.12))
 	for m in 3:
 		var mx := sp + Vector2(-44 + m * 44, 0)
-		_deco.draw_line(mx, mx + Vector2(0, -130 + abs(m - 1) * 20), Color(0.3, 0.2, 0.12), 4.0)
+		_deco.draw_line(mx, mx + Vector2(0, -130 + absf(m - 1) * 20), Color(0.3, 0.2, 0.12), 4.0)
 		for k in 2:
 			var y0 := -40.0 - k * 46.0
 			var w := 34.0 - k * 6.0

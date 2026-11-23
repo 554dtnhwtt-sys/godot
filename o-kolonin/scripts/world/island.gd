@@ -76,7 +76,7 @@ func _area(p: PackedVector2Array) -> float:
 	for i in p.size():
 		var j := (i + 1) % p.size()
 		a += p[i].x * p[j].y - p[j].x * p[i].y
-	return abs(a) * 0.5
+	return absf(a) * 0.5
 
 
 func _build_shape() -> void:
@@ -416,7 +416,7 @@ func _draw_deposit(d: Dictionary) -> void:
 			_draw_ellipse(p, 20 * s, 8 * s, Color(0.4, 0.9, 1.0, 0.25 * glow))
 			for k in 3:
 				var o := Vector2(-8 + k * 8, 0) * s
-				var hh := (16.0 + k * 6.0 - abs(k - 1) * 8.0) * s
+				var hh := (16.0 + k * 6.0 - absf(k - 1) * 8.0) * s
 				draw_colored_polygon(PackedVector2Array([p + o + Vector2(-4, 2) * s, p + o + Vector2(0, -hh), p + o + Vector2(4, 2) * s]), Color(0.55, 0.92, 1.0).lerp(Color(0.8, 0.6, 1.0), k * 0.4))
 		"guld":
 			_draw_ellipse(p, 16 * s, 7 * s, Color(0.55, 0.45, 0.3))

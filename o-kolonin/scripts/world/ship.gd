@@ -112,7 +112,7 @@ func stop() -> void:
 func wind_factor(h: float) -> float:
 	var d := cos(angle_difference(h, Game.wind_angle))  # 1 = medvind, -1 = motvind
 	var f := 1.0 - 0.15 * d if d >= 0.0 else 1.0 + 0.62 * d
-	return f * lerp(0.85, 1.15, clamp(Game.wind_strength - 0.5, 0.0, 1.0))
+	return f * lerpf(0.85, 1.15, clampf(Game.wind_strength - 0.5, 0.0, 1.0))
 
 
 func max_speed() -> float:
@@ -129,8 +129,8 @@ func max_speed() -> float:
 # ------------------------------------------------------------------ Uppdatering
 func _process(delta: float) -> void:
 	_t += delta
-	_flash_l = max(0.0, _flash_l - delta)
-	_flash_r = max(0.0, _flash_r - delta)
+	_flash_l = maxf(0.0, _flash_l - delta)
+	_flash_r = maxf(0.0, _flash_r - delta)
 	if sinking > 0.0:
 		sinking += delta
 		if sinking > 4.0:
@@ -230,7 +230,7 @@ func _fight_goal(tp: Vector2) -> Dictionary:
 	var a := to.angle()
 	var opt1 := a + PI * 0.5
 	var opt2 := a - PI * 0.5
-	var face := opt1 if abs(angle_difference(heading, opt1)) < abs(angle_difference(heading, opt2)) else opt2
+	var face := opt1 if absf(angle_difference(heading, opt1)) < absf(angle_difference(heading, opt2)) else opt2
 	# Håll avståndet: luta in eller ut lite.
 	if dist > r * 0.7:
 		face = lerp_angle(face, a, 0.3)
@@ -275,7 +275,7 @@ func _combat(delta: float) -> void:
 	var a := to.angle()
 	for side in [-1, 1]:
 		var normal := heading + side * PI * 0.5
-		if abs(angle_difference(normal, a)) < 0.45:
+		if absf(angle_difference(normal, a)) < 0.45:
 			if side == -1 and reload_l <= 0.0:
 				_broadside(side, tgt, tpos, bld)
 				reload_l = _reload_time()
@@ -301,7 +301,7 @@ func _broadside(side: int, tgt, tpos: Vector2, bld) -> void:
 	var fwd := Vector2.from_angle(heading)
 	var nrm := Vector2.from_angle(heading + side * PI * 0.5)
 	for i in n:
-		var t := (float(i) / max(1, n - 1)) - 0.5 if n > 1 else 0.0
+		var t := (float(i) / maxf(1, n - 1)) - 0.5 if n > 1 else 0.0
 		var from := position + fwd * t * length * 0.7 + nrm * 8.0 * size_f
 		from.y = position.y + (from.y - position.y) * Y_SQUASH - 8.0
 		var target = tgt if tgt != null else tpos
@@ -347,7 +347,7 @@ func _move(delta: float, goal: Dictionary) -> void:
 				tangent = -tangent
 			# Om målet ligger på ön (landstigning): stanna närmare.
 			if isl.blocks(gp) and position.distance_to(gp) < 120.0:
-				want = min(want, 20.0)
+				want = minf(want, 20.0)
 			desired = (tangent + away.normalized() * 0.35).angle()
 			break
 	var turn := (1.3 if not is_monster() else 1.8) / size_f
@@ -375,8 +375,8 @@ func _move(delta: float, goal: Dictionary) -> void:
 		var min_d := 34.0 * (size_f + other.size_f) * 0.5
 		if d.length() < min_d and d.length() > 0.01:
 			position += d.normalized() * (min_d - d.length()) * 2.0 * delta
-	position.x = clamp(position.x, 40.0, Data.WORLD_SIZE.x - 40.0)
-	position.y = clamp(position.y, 40.0, Data.WORLD_SIZE.y - 40.0)
+	position.x = clampf(position.x, 40.0, Data.WORLD_SIZE.x - 40.0)
+	position.y = clampf(position.y, 40.0, Data.WORLD_SIZE.y - 40.0)
 
 
 func _upkeep(days: float) -> void:
@@ -384,8 +384,8 @@ func _upkeep(days: float) -> void:
 		return
 	var home = world.nearest_own_island(owner_id, position, 260.0)
 	if home != null and Game.time - last_hit > 8.0:
-		hp = min(max_hp, hp + max_hp * 0.03 * days)
-		troops = min(max_troops, troops + max_troops * 0.05 * days)
+		hp = minf(max_hp, hp + max_hp * 0.03 * days)
+		troops = minf(max_troops, troops + max_troops * 0.05 * days)
 	elif Game.storm > 0.4 and not def.get("ghost", false):
 		hp -= max_hp * 0.006 * days * Game.storm
 		if hp <= 0.0:
@@ -415,7 +415,7 @@ func _draw() -> void:
 	if is_monster():
 		_draw_kraken()
 		return
-	var sink_k: float = clamp(sinking / 4.0, 0.0, 1.0)
+	var sink_k: float = clampf(sinking / 4.0, 0.0, 1.0)
 	var L := 46.0 * size_f
 	var W := 15.0 * size_f
 	var fwd := Vector2.from_angle(heading)
@@ -502,7 +502,7 @@ func _draw() -> void:
 			var y_bot := h * (0.18 if si == 0 else 0.58)
 			var y_top := h * (0.55 if si == 0 else 0.9)
 			var sx := perp.x * hw
-			if abs(sx) < hw * 0.45:
+			if absf(sx) < hw * 0.45:
 				sx = (1.0 if sx >= 0.0 else -1.0) * hw * 0.45
 			var sy := perp.y * hw * 0.5
 			var off := Vector2(sx, sy)
@@ -548,7 +548,7 @@ func _draw() -> void:
 
 
 func _draw_kraken() -> void:
-	var sink_k: float = clamp(sinking / 4.0, 0.0, 1.0)
+	var sink_k: float = clampf(sinking / 4.0, 0.0, 1.0)
 	var a := 1.0 - sink_k
 	var body := Color(0.45, 0.15, 0.35, a)
 	var R := 34.0 * size_f

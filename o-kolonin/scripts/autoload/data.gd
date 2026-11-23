@@ -313,5 +313,5 @@ func year_of(days: float) -> int:
 func cost_text(cost: Dictionary) -> String:
 	var parts: Array[String] = []
 	for r in cost:
-		parts.append("%d %s" % [int(ceil(cost[r])), RESOURCE_NAMES.get(r, r)])
+		parts.append("%d %s" % [int(ceilf(cost[r])), RESOURCE_NAMES.get(r, r)])
 	return ", ".join(parts) if parts.size() > 0 else "Gratis"

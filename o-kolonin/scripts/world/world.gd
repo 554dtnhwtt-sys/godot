@@ -310,7 +310,7 @@ func capture_island(isl, new_owner: String, garrison: float) -> void:
 	isl.trade_until = -1.0
 	for b in isl.buildings:
 		if b.built:
-			b.hp = max(b.hp, b.max_hp * 0.3)
+			b.hp = maxf(b.hp, b.max_hp * 0.3)
 	if new_owner == Game.player:
 		Game.say("Du har erövrat %s från %s!" % [isl.display_name, Data.nation_short(old)], Color(0.6, 1, 0.6))
 	elif old == Game.player:
@@ -390,7 +390,7 @@ func _process(delta: float) -> void:
 	_update_wind(delta)
 	var i := 0
 	while i < markers.size():
-		markers[i]["t"] -= delta / max(0.001, Engine.time_scale)
+		markers[i]["t"] -= delta / maxf(0.001, Engine.time_scale)
 		if markers[i]["t"] <= 0.0:
 			markers.remove_at(i)
 		else:
@@ -401,7 +401,7 @@ func _update_wind(delta: float) -> void:
 	var days := delta / Data.DAY_SECONDS
 	Game.wind_angle = rotate_toward(Game.wind_angle, _wind_target, 0.02 * days)
 	if Game.storm > 0.0:
-		Game.wind_strength = lerp(Game.wind_strength, 1.4 + Game.storm * 0.6, 0.02)
+		Game.wind_strength = lerpf(Game.wind_strength, 1.4 + Game.storm * 0.6, 0.02)
 
 
 func _day_tick() -> void:
@@ -456,7 +456,7 @@ func _economy_day() -> void:
 				for lux in Data.LUXURY_PRICES:
 					var have := Game.res(n, lux)
 					if have > Data.LUXURY_RESERVE:
-						var sell: float = min(0.5, have - Data.LUXURY_RESERVE)
+						var sell: float = minf(0.5, have - Data.LUXURY_RESERVE)
 						var gold: float = sell * Data.LUXURY_PRICES[lux] * Game.mod(n, "trade")
 						Game.add_res(n, lux, -sell)
 						Game.add_res(n, "guld", gold)
@@ -492,7 +492,7 @@ func _economy_day() -> void:
 			Game.add_res(s.owner_id, "mat", -food)
 			rates[s.owner_id]["mat"] = rates[s.owner_id].get("mat", 0.0) - food
 			if Game.res(s.owner_id, "mat") <= 0.0:
-				s.hp = max(1.0, s.hp - s.max_hp * 0.01)
+				s.hp = maxf(1.0, s.hp - s.max_hp * 0.01)
 	for n in Game.nations:
 		if Game.nations[n]["alive"]:
 			Game.tick_research(n)
@@ -694,7 +694,7 @@ func _right_click(wp: Vector2) -> void:
 		if n > 1:
 			var row := i / 4
 			var col := i % 4
-			off = Vector2((col - min(3, n - 1) * 0.5) * 70.0, row * 70.0)
+			off = Vector2((col - minf(3, n - 1) * 0.5) * 70.0, row * 70.0)
 		s.order_move(wp + off)
 		i += 1
 	_marker(wp, Color(0.6, 1, 0.6))

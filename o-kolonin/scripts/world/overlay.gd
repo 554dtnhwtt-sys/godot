@@ -51,5 +51,5 @@ func _dashed(a: Vector2, b: Vector2, c: Color, w: float, dash: float) -> void:
 	var dir := (b - a) / d
 	var t := 0.0
 	while t < d:
-		draw_line(a + dir * t, a + dir * min(d, t + dash * 0.6), c, w)
+		draw_line(a + dir * t, a + dir * minf(d, t + dash * 0.6), c, w)
 		t += dash

@@ -12,8 +12,8 @@ var _dirty := false
 
 
 func setup() -> void:
-	gw = int(ceil(Data.WORLD_SIZE.x / CELL))
-	gh = int(ceil(Data.WORLD_SIZE.y / CELL))
+	gw = int(ceilf(Data.WORLD_SIZE.x / CELL))
+	gh = int(ceilf(Data.WORLD_SIZE.y / CELL))
 	img = Image.create_empty(gw, gh, false, Image.FORMAT_RGBA8)
 	img.fill(Color(1, 1, 1, 1))
 	tex = ImageTexture.create_from_image(img)
@@ -41,7 +41,7 @@ func reveal(pos: Vector2, radius: float) -> void:
 			var d := Vector2(x + 0.5 - cx, y + 0.5 - cy).length()
 			if d >= r:
 				continue
-			var a: float = clamp((d - (r - 2.0)) / 2.0, 0.0, 1.0)
+			var a: float = clampf((d - (r - 2.0)) / 2.0, 0.0, 1.0)
 			if a < img.get_pixel(x, y).a - 0.01:
 				img.set_pixel(x, y, Color(1, 1, 1, a))
 				_dirty = true

@@ -152,7 +152,7 @@ func update_progress() -> void:
 		var rid: String = st["current_research"]
 		_progress.max_value = Data.research_cost(rid)
 		_progress.value = st["research_progress"]
-		var left := (Data.research_cost(rid) - st["research_progress"]) / max(0.01, rate)
+		var left := (Data.research_cost(rid) - st["research_progress"]) / maxf(0.01, rate)
 		_progress_label.text = "Pågår: %s   (%.1f poäng/dag, ca %d dagar kvar)" % [Data.RESEARCH[rid]["name"], rate, int(left)]
 	else:
 		_progress.value = 0

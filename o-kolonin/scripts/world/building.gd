@@ -34,7 +34,7 @@ func _process(delta: float) -> void:
 	_t += delta
 	var days := delta / Data.DAY_SECONDS
 	if not built:
-		progress += days / max(0.5, def().get("time", 6.0))
+		progress += days / maxf(0.5, def().get("time", 6.0))
 		if progress >= 1.0:
 			progress = 1.0
 			built = true
@@ -46,7 +46,7 @@ func _process(delta: float) -> void:
 			if hp >= max_hp * 0.5:
 				ruined = false
 	elif hp < max_hp and Game.time - island.last_attacked > 10.0:
-		hp = min(max_hp, hp + max_hp * 0.01 * days)
+		hp = minf(max_hp, hp + max_hp * 0.01 * days)
 	if is_active() and def().has("fort"):
 		_fort_logic(delta)
 	queue_redraw()
@@ -69,7 +69,7 @@ func _fort_logic(delta: float) -> void:
 
 func take_damage(amount: float) -> void:
 	if not built:
-		progress = max(0.0, progress - amount / 100.0)
+		progress = maxf(0.0, progress - amount / 100.0)
 		return
 	hp -= amount
 	island.last_attacked = Game.time
@@ -263,7 +263,7 @@ func _draw() -> void:
 			draw_colored_polygon(PackedVector2Array([Vector2(-36, 4), Vector2(36, 4), Vector2(30, -6), Vector2(-30, -6)]), wood)
 			for k in 7:
 				var x := -20 + k * 7
-				var hh := 14.0 - abs(k - 3) * 2.5
+				var hh := 14.0 - absf(k - 3) * 2.5
 				draw_arc(Vector2(x, -6), hh, PI, TAU, 8, wood.darkened(0.3), 2.0)
 			draw_line(Vector2(-26, -6), Vector2(26, -6), wood.darkened(0.4), 3.0)
 			draw_line(Vector2(30, -6), Vector2(30, -40), wood.darkened(0.2), 2.0)

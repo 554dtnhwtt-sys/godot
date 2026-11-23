@@ -131,7 +131,7 @@ func update_values() -> void:
 		var fill_col := UITheme.GOOD if rel["value"] >= 0 else UITheme.BAD
 		row["bar"].add_theme_stylebox_override("fill", UITheme.box(fill_col, Color(0, 0, 0, 0), 0, 3, 0.0))
 		var their := Game.nation_strength(n)
-		var ratio := my_str / max(1.0, their)
+		var ratio := my_str / maxf(1.0, their)
 		var cmp := "jämnstarka"
 		if ratio > 1.6:
 			cmp = "du är mycket starkare"
