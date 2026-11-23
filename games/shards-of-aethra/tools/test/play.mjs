@@ -1,0 +1,51 @@
+// Drives a short game in headless Chromium and saves screenshots.
+import { createRequire } from 'node:module';
+import http from 'node:http';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import { join, extname } from 'node:path';
+const require = createRequire(process.env.PW_ROOT + '/');
+const { chromium } = require('playwright');
+const out = process.argv[2];
+const W = +(process.argv[3] || 1600), H = +(process.argv[4] || 900);
+const root = new URL('../../dist/', import.meta.url).pathname;
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.webp': 'image/webp', '.mp3': 'audio/mpeg', '.png': 'image/png' };
+const server = http.createServer((req, res) => {
+  let p = join(root, decodeURIComponent(req.url.split('?')[0]));
+  if (existsSync(p) && statSync(p).isDirectory()) p = join(p, 'index.html');
+  if (!existsSync(p)) { res.writeHead(404); res.end(); return; }
+  res.writeHead(200, { 'Content-Type': types[extname(p)] || 'application/octet-stream' });
+  res.end(readFileSync(p));
+}).listen(0);
+const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const page = await browser.newPage({ viewport: { width: W, height: H } });
+const logs = [];
+page.on('console', (m) => { if (!/GPU stall|GL Driver/.test(m.text())) logs.push(m.type() + ': ' + m.text()); });
+page.on('pageerror', (e) => logs.push('PAGEERROR: ' + e.message + '\n' + e.stack));
+await page.goto(`http://localhost:${server.address().port}/index.html`);
+const shot = async (name) => { await page.screenshot({ path: `${out}/${name}.png` }); };
+const steps = (process.env.STEPS || 'title,draft,plan,combat').split(',');
+await page.waitForSelector('#title-menu:not([hidden])', { timeout: 60000 });
+await page.waitForTimeout(800);
+if (steps.includes('title')) await shot('01-title');
+await page.click('#t-play');
+await page.waitForTimeout(800);
+await page.evaluate(() => { window.__app.match.timeLeft = 0.01; });
+await page.waitForTimeout(1500);
+if (steps.includes('draft')) await shot('02-draft');
+await page.click('.draft');
+await page.waitForTimeout(400);
+await page.evaluate(() => { const m = window.__app.match; m.timeLeft = 0.01; });
+await page.waitForTimeout(1500);
+await page.evaluate(() => { const m = window.__app.match; m.local.gold = 30; m.local.level = 5; m.local.items.push('blade', 'rod', 'blade+bow'); m.emit('update'); });
+for (let i = 0; i < 5; i++) { await page.click(`#shop .card:nth-child(${i + 1})`).catch(() => {}); await page.waitForTimeout(150); }
+await page.evaluate(() => { const m = window.__app.match; m.local.autoFill(); m.emit('update'); });
+await page.waitForTimeout(1200);
+if (steps.includes('plan')) await shot('03-plan');
+await page.evaluate(() => { const m = window.__app.match; m.timeLeft = 0.01; });
+await page.waitForTimeout(+(process.env.COMBAT_WAIT || 3500));
+if (steps.includes('combat')) await shot('04-combat');
+await page.waitForTimeout(+(process.env.COMBAT_WAIT2 || 4000));
+if (steps.includes('combat')) await shot('05-combat2');
+console.log(logs.slice(0, 40).join('\n'));
+await browser.close();
+server.close();
