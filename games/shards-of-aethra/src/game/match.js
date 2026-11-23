@@ -478,7 +478,7 @@ export class Match extends Emitter {
       if (c && !c.done) {
         this.combatAcc = (this.combatAcc || 0) + dt * TPS * this.combatSpeed;
         let steps = 0;
-        while (this.combatAcc >= 1 && !c.done && steps < 12) { c.step(); this.combatAcc -= 1; steps++; }
+        while (this.combatAcc >= 1 && !c.done && steps < 12 * this.combatSpeed) { c.step(); this.combatAcc -= 1; steps++; }
         if (c.done) { this.combatAcc = 0; this.combatEndDelay = 2.2; }
       } else if (!c) {
         this.combatEndDelay = this.combatEndDelay ?? 1.5;

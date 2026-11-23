@@ -43,7 +43,10 @@ class App {
     this.titleCam();
     requestAnimationFrame((t) => this.loop(t));
     this.boot();
-    document.addEventListener('pointerdown', () => this.audio.unlock(), { once: false });
+    document.addEventListener('pointerdown', () => {
+      this.audio.unlock();
+      if (!this.match && !this.titleMusic) { this.titleMusic = true; this.audio.playMusic('theme'); }
+    });
   }
 
   async boot() {
