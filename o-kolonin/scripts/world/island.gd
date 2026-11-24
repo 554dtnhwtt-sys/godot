@@ -5,7 +5,6 @@ extends Node2D
 const BuildingScript = preload("res://scripts/world/building.gd")
 const PalmScript = preload("res://scripts/world/palm.gd")
 const Y_SQUASH := 0.72
-const SLOT_SPACING := 72.0
 
 var id := ""
 var display_name := ""
@@ -25,6 +24,7 @@ var population := 0.0
 var governor := false      # guvernören bygger automatiskt
 var governor_focus := "balans"
 var starving := false
+var famine_warned := -999.0
 var last_attacked := -999.0
 var selected := false
 var world = null
@@ -40,9 +40,14 @@ var grass := PackedVector2Array()
 var shallow1 := PackedVector2Array()
 var shallow2 := PackedVector2Array()
 var foam := PackedVector2Array()
-var slots: Array = []        # lokala positioner (Vector2)
-var slot_coastal: Array = []  # bool per plats
-var slot_used: Array = []     # byggnad eller null
+# Färdigplanerad stad och resursplatser (lokala koordinater)
+var town_center := Vector2.ZERO
+var harbor_dir := Vector2.RIGHT
+var town_level := 0
+var town_upgrade_left := 0.0
+var plots: Array = []   # {"kind": typ eller "house"/"hall"/"plaza"/"tower", "pos": Vector2, "b": byggnad}
+var sites: Array = []   # {"res": resurs, "pos": Vector2, "b": byggnad}
+var hover_site := -1
 var buildings: Array = []
 var palms: Array = []
 var decos: Array = []
@@ -65,7 +70,7 @@ func setup(def: Dictionary, p_world, p_objects: Node2D) -> void:
 	home_of = def.get("home", "")
 	_rng.seed = hash(id)
 	_build_shape()
-	_build_slots()
+	_build_layout()
 	_build_decor()
 	z_index = -10
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
@@ -116,23 +121,135 @@ func _build_shape() -> void:
 		grass_side.append(p + Vector2(0, 6))
 
 
-func _build_slots() -> void:
-	var inner := _largest(Geometry2D.offset_polygon(poly, -48.0))
-	var coast_near := _largest(Geometry2D.offset_polygon(poly, -105.0))
-	var x := -radius
-	while x <= radius:
-		var y := -radius
-		while y <= radius:
-			var p := Vector2(x, y * Y_SQUASH * 0.95)
-			if Geometry2D.is_point_in_polygon(p, inner):
-				if volcano and p.distance_to(Vector2(radius * 0.05, -radius * 0.12)) < radius * 0.38:
-					y += SLOT_SPACING
-					continue
-				slots.append(p)
-				slot_coastal.append(not Geometry2D.is_point_in_polygon(p, coast_near))
-				slot_used.append(null)
-			y += SLOT_SPACING
-		x += SLOT_SPACING
+func _sq(v: Vector2) -> Vector2:
+	return Vector2(v.x, v.y * Y_SQUASH)
+
+
+func _volcano_center() -> Vector2:
+	return Vector2(radius * 0.05, -radius * 0.12)
+
+
+func _inside(p: Vector2, area: PackedVector2Array) -> Vector2:
+	var q := p
+	for i in 30:
+		if Geometry2D.is_point_in_polygon(q, area):
+			return q
+		q = q * 0.9
+	return q
+
+
+## Punkt på kusten i en viss riktning, flyttad lite inåt land.
+func _coast_at(dir: Vector2, inset: float) -> Vector2:
+	var best := poly[0]
+	var bd := -INF
+	for p in poly:
+		var d := Vector2(p.x, p.y / Y_SQUASH).normalized().dot(dir)
+		if d > bd:
+			bd = d
+			best = p
+	return best.move_toward(Vector2.ZERO, inset)
+
+
+func _free_spot(p: Vector2, min_d: float) -> bool:
+	for pl in plots:
+		if pl["pos"].distance_to(p) < min_d:
+			return false
+	return true
+
+
+## Stadsplan: rådhus i mitten, hamn mot havet, särskilda platser och hus i ringar.
+func _build_layout() -> void:
+	var to_center := Data.WORLD_SIZE * 0.5 - position
+	harbor_dir = to_center.normalized() if to_center.length() > 50.0 else Vector2(1, 0.3).normalized()
+	var inner := _largest(Geometry2D.offset_polygon(poly, -62.0))
+	var c := _inside(_sq(harbor_dir) * radius * 0.26, inner)
+	if volcano and c.distance_to(_volcano_center()) < radius * 0.5:
+		c = _inside(_volcano_center() + _sq(harbor_dir) * radius * 0.55, inner)
+	town_center = c
+	var side := harbor_dir.orthogonal()
+	var harbor := _coast_at(harbor_dir, 28.0)
+	plots.append({"kind": "hall", "pos": c, "b": null})
+	plots.append({"kind": "skeppsvarv", "pos": harbor, "b": null})
+	plots.append({"kind": "lagerhus", "pos": _inside(c.lerp(harbor, 0.55) + _sq(side) * 62.0, inner), "b": null})
+	plots.append({"kind": "marknad", "pos": _inside(c + _sq(side * 100.0 + harbor_dir * 25.0), inner), "b": null})
+	plots.append({"kind": "akademi", "pos": _inside(c + _sq(-side * 105.0 - harbor_dir * 10.0), inner), "b": null})
+	plots.append({"kind": "plaza", "pos": _inside(c + _sq(harbor_dir * 72.0 - side * 18.0), inner), "b": null})
+	plots.append({"kind": "romdestilleri", "pos": _inside(c + _sq(harbor_dir.rotated(2.1) * 180.0), inner), "b": null})
+	plots.append({"kind": "glasbruk", "pos": _inside(c + _sq(harbor_dir.rotated(-2.1) * 180.0), inner), "b": null})
+	plots.append({"kind": "kanonbatteri", "pos": _coast_at(harbor_dir.rotated(0.75), 26.0), "b": null})
+	plots.append({"kind": "kanonbatteri", "pos": _coast_at(harbor_dir.rotated(-0.75), 26.0), "b": null})
+	# Fyren på udden längst bort från staden
+	var far := poly[0]
+	for p in poly:
+		if p.distance_to(c) > far.distance_to(c):
+			far = p
+	plots.append({"kind": "fyrtorn", "pos": far.move_toward(Vector2.ZERO, 24.0), "b": null})
+	plots.append({"kind": "tower", "pos": _inside(c + _sq(side * 210.0 - harbor_dir * 40.0), inner), "b": null})
+	plots.append({"kind": "tower", "pos": _inside(c + _sq(-side * 210.0 - harbor_dir * 40.0), inner), "b": null})
+	_build_sites(inner)
+	# Hus i ringar runt rådhuset
+	var houses := 0
+	for ring in [78.0, 124.0, 170.0, 216.0, 262.0]:
+		var n := int(TAU * ring / 66.0)
+		var off := _rng.randf() * TAU
+		for k in n:
+			if houses >= 22:
+				break
+			var a := off + TAU * k / n
+			var p := c + _sq(Vector2.from_angle(a) * ring)
+			if not Geometry2D.is_point_in_polygon(p, inner):
+				continue
+			if volcano and p.distance_to(_volcano_center()) < radius * 0.42:
+				continue
+			if not _free_spot(p, 54.0):
+				continue
+			var near_site := false
+			for st in sites:
+				if st["pos"].distance_to(p) < 72.0:
+					near_site = true
+			if near_site:
+				continue
+			plots.append({"kind": "house", "pos": p, "b": null})
+			houses += 1
+
+
+## Resursplatser: skog, kokospalmer, fiskevatten och öns fyndigheter.
+func _build_sites(inner: PackedVector2Array) -> void:
+	var want: Array = []
+	for d in deposits:
+		var n := 1
+		if d == "tra":
+			n = 3 if radius > 300.0 else 2
+		elif d == "mat":
+			n = 2
+		elif d == "sten" and radius > 300.0:
+			n = 2
+		for i in n:
+			want.append(d)
+	want.append("fisk")
+	if radius > 280.0:
+		want.append("fisk")
+	var area := _largest(Geometry2D.offset_polygon(poly, -48.0))
+	for res in want:
+		var coastal: bool = res in ["fisk", "parlor"]
+		for attempt in 160:
+			# Lätta på kraven om ön är trång
+			var k := 1.0 - 0.45 * (attempt / 160.0)
+			var p := _random_beach_point() if coastal else _random_point_in(area)
+			if p.distance_to(town_center) < (140.0 if coastal else 165.0) * k:
+				continue
+			if not _free_spot(p, 70.0 * k):
+				continue
+			var clash := false
+			for st in sites:
+				if st["pos"].distance_to(p) < 100.0 * k:
+					clash = true
+			if clash:
+				continue
+			if volcano and p.distance_to(_volcano_center()) < radius * 0.42:
+				continue
+			sites.append({"res": res, "pos": p, "b": null})
+			break
 
 
 func _build_decor() -> void:
@@ -140,40 +257,44 @@ func _build_decor() -> void:
 	for i in int(radius / 12):
 		var p := _random_point_in(grass)
 		patches.append({"p": p, "r": _rng.randf_range(14, 34), "c": _rng.randf_range(-0.06, 0.06)})
-	# Resursdekorationer
-	for d in deposits:
-		if d in ["tra", "mat"]:
-			continue
-		var count := 3 if d != "kristaller" else 4
-		for i in count:
-			var p := _random_point_in(grass)
-			if d == "parlor":
-				p = _random_beach_point()
-			var ok := true
-			for s in slots:
-				if s.distance_to(p) < 26:
-					ok = false
-			if ok:
-				decos.append({"type": d, "p": p, "s": _rng.randf_range(0.8, 1.25)})
-	# Palmer – inte på byggplatserna
-	var tries := int(radius * 0.2)
+	# Resursplatsernas utseende: skogsdungar, palmlundar och fyndigheter
+	for st in sites:
+		var res: String = st["res"]
+		var sp: Vector2 = st["pos"]
+		if res == "tra" or res == "mat":
+			for k in 4:
+				var a := TAU * k / 4.0 + _rng.randf() * 0.6
+				_add_palm(sp + _sq(Vector2.from_angle(a) * _rng.randf_range(34, 54)), 1 if res == "mat" else 0)
+		elif res != "fisk":
+			for k in 2:
+				var a := (PI * 0.2 if k == 0 else PI * 1.1) + _rng.randf() * 0.5
+				decos.append({"type": res, "p": sp + _sq(Vector2.from_angle(a) * 38.0), "s": _rng.randf_range(0.75, 1.0)})
+	# Palmer utanför staden och resursplatserna
+	var tries := int(radius * 0.22)
 	for i in tries:
 		var p := _random_point_in(grass)
-		if _rng.randf() < 0.35:
+		if _rng.randf() < 0.4:
 			p = _random_beach_point()
-		var near := false
-		for s in slots:
-			if s.distance_to(p) < 40:
-				near = true
-				break
-		if near and _rng.randf() < 0.9:
+		if p.distance_to(town_center) < 230.0 or not _free_spot(p, 60.0):
 			continue
-		var palm := PalmScript.new()
-		palm.position = position + p
-		palm.seed_value = _rng.randi()
-		palm.dark = dark
-		objects_layer.add_child(palm)
-		palms.append(palm)
+		var near := false
+		for st in sites:
+			if st["pos"].distance_to(p) < 70.0:
+				near = true
+		if near:
+			continue
+		_add_palm(p, 0)
+
+
+func _add_palm(p: Vector2, variant: int) -> void:
+	var palm := PalmScript.new()
+	palm.position = position + p
+	palm.seed_value = _rng.randi()
+	palm.dark = dark
+	if variant > 0:
+		palm.force_variant = variant
+	objects_layer.add_child(palm)
+	palms.append(palm)
 
 
 func _random_point_in(p: PackedVector2Array) -> Vector2:
@@ -215,22 +336,15 @@ func approach_radius() -> float:
 func max_garrison() -> float:
 	if owner_id == "neutral":
 		return 0.0
-	var g := 0.0
+	var g := 10.0
+	if town_level > 0:
+		g = Data.TOWN_LEVELS[town_level - 1]["garrison"]
 	for b in buildings:
 		if b.built:
 			g += Data.BUILDINGS[b.type].get("garrison", 0)
 	if owner_id == "vaktarna":
 		g += 80.0
-	g += 10.0
 	return g * Game.mod(owner_id, "garrison")
-
-
-func free_slot_count() -> int:
-	var n := 0
-	for s in slot_used:
-		if s == null:
-			n += 1
-	return n
 
 
 func has_shipyard() -> bool:
@@ -247,62 +361,181 @@ func shipyard_building():
 	return null
 
 
+# ------------------------------------------------------------------ Stad och resursplatser
+static func is_resource_type(type: String) -> bool:
+	for k in Data.SITES:
+		if Data.SITES[k]["building"] == type:
+			return true
+	return false
+
+
+static func site_res_for(type: String) -> String:
+	for k in Data.SITES:
+		if Data.SITES[k]["building"] == type:
+			return k
+	return ""
+
+
+func free_site(res: String) -> int:
+	for i in sites.size():
+		if sites[i]["res"] == res and sites[i]["b"] == null:
+			return i
+	return -1
+
+
+func free_plot(kind: String) -> int:
+	for i in plots.size():
+		if plots[i]["kind"] == kind and plots[i]["b"] == null:
+			return i
+	return -1
+
+
+func free_slot_count() -> int:
+	var n := 0
+	for st in sites:
+		if st["b"] == null:
+			n += 1
+	return n
+
+
 func can_build_type(type: String) -> bool:
-	var def: Dictionary = Data.BUILDINGS[type]
-	if def.has("deposit") and not deposits.has(def["deposit"]):
+	if is_resource_type(type):
+		return free_site(site_res_for(type)) >= 0
+	if not Data.TOWN_REQ.has(type):
 		return false
-	return _pick_slot(type) >= 0
+	return town_level >= Data.TOWN_REQ[type] and free_plot(type) >= 0
 
 
-func _pick_slot(type: String) -> int:
-	var def: Dictionary = Data.BUILDINGS[type]
-	var coastal: bool = def.get("coastal", false)
-	var best := -1
-	var best_score := INF
-	for i in slots.size():
-		if slot_used[i] != null:
-			continue
-		var s: Vector2 = slots[i]
-		var score := s.length()
-		if coastal:
-			if not slot_coastal[i]:
-				continue
-			score = -s.length()
-		score += _rng.randf() * 30.0
-		if score < best_score:
-			best_score = score
-			best = i
-	return best
-
-
-func add_building(type: String, instant: bool = false):
-	var i := _pick_slot(type)
-	if i < 0:
-		return null
+func _spawn(type: String, local_pos: Vector2, instant: bool, variant: String = "", delay: float = 0.0):
 	var b := BuildingScript.new()
 	b.type = type
+	b.variant = variant
 	b.island = self
 	b.owner_id = owner_id
-	b.slot_index = i
-	b.position = position + slots[i]
+	b.position = position + local_pos
+	b.delay = delay
 	if instant:
 		b.progress = 1.0
 		b.built = true
-	slot_used[i] = b
 	buildings.append(b)
 	objects_layer.add_child(b)
 	# Rensa palmer som står i vägen
+	var clear := 30.0 if type == "skogshuggare" or type == "kokosodling" else 46.0
 	for palm in palms.duplicate():
-		if is_instance_valid(palm) and palm.position.distance_to(b.position) < 58.0:
+		if is_instance_valid(palm) and palm.position.distance_to(b.position) < clear:
 			palms.erase(palm)
 			palm.queue_free()
 	return b
 
 
+## Bygger en byggnad: resursbyggnader på en ledig resursplats, stadsbyggnader på sin plats i staden.
+func add_building(type: String, instant: bool = false):
+	if is_resource_type(type):
+		var i := free_site(site_res_for(type))
+		return build_site(i, instant) if i >= 0 else null
+	var pi := free_plot(type)
+	if pi < 0:
+		return null
+	var b = _spawn(type, plots[pi]["pos"], instant)
+	plots[pi]["b"] = b
+	return b
+
+
+func build_site(i: int, instant: bool = false):
+	if i < 0 or i >= sites.size() or sites[i]["b"] != null:
+		return null
+	var type: String = Data.SITES[sites[i]["res"]]["building"]
+	var b = _spawn(type, sites[i]["pos"], instant)
+	b.site_index = i
+	sites[i]["b"] = b
+	return b
+
+
+func hall():
+	for pl in plots:
+		if pl["kind"] == "hall" and pl["b"] != null:
+			return pl["b"]
+	return null
+
+
+## Sätter stadens nivå. Staden växer av sig själv: nytt rådhus, fler hus, torg och torn.
+func set_town_level(lv: int, instant: bool) -> void:
+	town_level = clampi(lv, 0, Data.TOWN_LEVELS.size())
+	if town_level == 0:
+		return
+	var td: Dictionary = Data.TOWN_LEVELS[town_level - 1]
+	var h = hall()
+	if h == null:
+		var pi := free_plot("hall")
+		h = _spawn("radhus", plots[pi]["pos"], instant, td["hall"])
+		plots[pi]["b"] = h
+	elif h.variant != td["hall"]:
+		h.change_variant(td["hall"], instant)
+	# Nya hus byggs ett i taget, inifrån och ut
+	var tiers: Array = Data.HOUSE_TIERS[td["tier"]]
+	var have := 0
+	for pl in plots:
+		if pl["kind"] == "house" and pl["b"] != null:
+			have += 1
+	var k := 0
+	for pl in plots:
+		if have >= td["houses"]:
+			break
+		if pl["kind"] == "house" and pl["b"] == null:
+			pl["b"] = _spawn("hus", pl["pos"], instant, tiers[_rng.randi() % tiers.size()], 0.0 if instant else k * 1.6)
+			have += 1
+			k += 1
+	# Gamla hus byggs om i finare stil
+	if not instant:
+		for pl in plots:
+			var b = pl["b"]
+			if pl["kind"] == "house" and b != null and not b.variant in tiers and _rng.randf() < 0.45:
+				b.change_variant(tiers[_rng.randi() % tiers.size()], false, k * 1.2)
+				k += 1
+	if town_level >= 3:
+		var pi := free_plot("plaza")
+		if pi >= 0:
+			plots[pi]["b"] = _spawn("dekor", plots[pi]["pos"], instant, "plaza")
+	if town_level >= 4:
+		for n in 2:
+			var pi := free_plot("tower")
+			if pi >= 0:
+				plots[pi]["b"] = _spawn("dekor", plots[pi]["pos"], instant, "tower", 0.0 if instant else 2.0 + n)
+
+
+func upgrade_cost(nation: String) -> Dictionary:
+	if town_level <= 0 or town_level >= Data.TOWN_LEVELS.size():
+		return {}
+	var base: Dictionary = Data.TOWN_LEVELS[town_level]["cost"]
+	var out := {}
+	for r in base:
+		out[r] = ceilf(base[r] * Game.mod(nation, "build_cost"))
+	return out
+
+
+func start_town_upgrade() -> void:
+	town_upgrade_left = Data.TOWN_LEVELS[town_level]["time"]
+	var h = hall()
+	if h != null:
+		h.begin_upgrade(town_upgrade_left)
+
+
+func site_at(world_pos: Vector2) -> int:
+	var lp := world_pos - position
+	for i in sites.size():
+		if (sites[i]["pos"] + Vector2(0, -14)).distance_to(lp) < 42.0:
+			return i
+	return -1
+
+
 func remove_building(b) -> void:
 	buildings.erase(b)
-	if b.slot_index >= 0 and b.slot_index < slot_used.size():
-		slot_used[b.slot_index] = null
+	for pl in plots:
+		if pl["b"] == b:
+			pl["b"] = null
+	for st in sites:
+		if st["b"] == b:
+			st["b"] = null
 	if is_instance_valid(b):
 		b.queue_free()
 
@@ -320,6 +553,8 @@ func set_owner_id(new_owner: String) -> void:
 # ------------------------------------------------------------------ Lager och befolkning
 func capacity() -> float:
 	var c := Data.STORAGE_HOME if home_of != "" and home_of == owner_id else Data.STORAGE_BASE
+	if town_level > 0:
+		c += Data.TOWN_LEVELS[town_level - 1]["storage"]
 	for b in buildings:
 		if b.is_active():
 			c += Data.BUILDINGS[b.type].get("storage", 0.0)
@@ -339,18 +574,16 @@ func good(r: String) -> float:
 
 
 func housing() -> float:
-	var h := 0.0
-	for b in buildings:
-		if b.is_active():
-			h += Data.BUILDINGS[b.type].get("housing", 0.0)
-	return h
+	if town_level <= 0:
+		return 0.0
+	return Data.TOWN_LEVELS[town_level - 1]["housing"]
 
 
 func workers_needed() -> float:
 	var w := 0.0
 	for b in buildings:
 		if b.is_active():
-			w += Data.BUILDINGS[b.type].get("workers", 0.0)
+			w += Data.BUILDINGS[b.type].get("workers", 0.0) * Data.RES_LEVEL_WORKERS[b.level - 1]
 	return w
 
 
@@ -410,6 +643,7 @@ func _draw() -> void:
 	for pt in patches:
 		var c := Color(1, 1, 0.8, 0.07) if pt["c"] > 0 else Color(0, 0.15, 0, 0.08)
 		_draw_ellipse(pt["p"], pt["r"], pt["r"] * 0.6, c)
+	_draw_town_ground()
 	if volcano:
 		_draw_volcano()
 	for d in decos:
@@ -429,6 +663,53 @@ func _draw() -> void:
 		sel.append(poly[0])
 		draw_polyline(sel, Color(1, 0.95, 0.5, 0.6 + 0.3 * sin(_t * 5.0)), 3.0, true)
 	_draw_label()
+
+
+## Vägar från torget till byggnaderna, torgets stenläggning och invånare som går omkring.
+func _path_pts(a: Vector2, b: Vector2) -> PackedVector2Array:
+	var mid := (a + b) * 0.5
+	var n := (b - a).orthogonal().normalized() * (b - a).length() * 0.12 * (1.0 if int(b.x) % 2 == 0 else -1.0)
+	var out := PackedVector2Array()
+	for i in 11:
+		var t := i / 10.0
+		out.append(a.lerp(mid + n, t).lerp((mid + n).lerp(b, t), t))
+	return out
+
+
+func _draw_town_ground() -> void:
+	if town_level <= 0:
+		return
+	var dests: Array = []
+	for b in buildings:
+		if b.type == "hus" or b.type == "radhus" or b.type == "dekor" or b.delay > 0.0:
+			continue
+		dests.append(b.position - position)
+	var road := Color(0.8, 0.68, 0.45, 0.55) if not dark else Color(0.35, 0.32, 0.3, 0.55)
+	for d in dests:
+		var pts := _path_pts(town_center, d)
+		draw_polyline(pts, road, 10.0, true)
+		draw_polyline(pts, road.lightened(0.18), 5.0, true)
+	# Torget växer med staden
+	var pr := 34.0 + town_level * 12.0
+	_draw_ellipse(town_center + Vector2(0, 6), pr, pr * 0.55, Color(0.78, 0.74, 0.66, 0.55))
+	_draw_ellipse(town_center + Vector2(0, 6), pr * 0.8, pr * 0.44, Color(0.86, 0.82, 0.74, 0.4))
+	# Invånare som går mellan torget och byggnaderna
+	if dests.is_empty() or owner_id == "neutral":
+		return
+	var n := clampi(int(population / 7.0), 1, 16)
+	for i in n:
+		var d: Vector2 = dests[i % dests.size()]
+		var ph := fmod(_t * (0.05 + (i % 5) * 0.012) + i * 0.37, 2.0)
+		var t := ph if ph < 1.0 else 2.0 - ph
+		var pts := _path_pts(town_center, d)
+		var f := t * 10.0
+		var k := mini(int(f), 9)
+		var pos: Vector2 = pts[k].lerp(pts[k + 1], f - k)
+		var bob := absf(sin(_t * 8.0 + i)) * 1.5
+		var cloth: Color = [Color(0.85, 0.3, 0.25), Color(0.25, 0.45, 0.8), Color(0.95, 0.85, 0.6), Color(0.35, 0.6, 0.3), Color(0.9, 0.9, 0.88)][i % 5]
+		_draw_ellipse(pos + Vector2(2, 1), 3.5, 1.5, Color(0, 0, 0, 0.25))
+		draw_rect(Rect2(pos + Vector2(-2, -8 - bob), Vector2(4, 7)), cloth)
+		draw_circle(pos + Vector2(0, -10 - bob), 2.2, Color(0.55, 0.38, 0.26))
 
 
 func _draw_label() -> void:

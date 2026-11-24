@@ -567,9 +567,13 @@ func _build_island_info(isl) -> void:
 	tabs.add_theme_font_size_override("font_size", 14)
 	info_box.add_child(tabs)
 	var page_o := VBoxContainer.new()
-	page_o.name = "Island"
+	page_o.name = "Town"
 	page_o.add_theme_constant_override("separation", 6)
 	tabs.add_child(page_o)
+	var page_r := VBoxContainer.new()
+	page_r.name = "Resources"
+	page_r.add_theme_constant_override("separation", 4)
+	tabs.add_child(page_r)
 	var page_b := VBoxContainer.new()
 	page_b.name = "Build"
 	page_b.add_theme_constant_override("separation", 6)
@@ -583,6 +587,34 @@ func _build_island_info(isl) -> void:
 		page_v.queue_free()
 	tabs.current_tab = clampi(_island_tab, 0, tabs.get_tab_count() - 1)
 	tabs.tab_changed.connect(func(t): _island_tab = t)
+	# Stadens nivå och uppgradering
+	var trow := HBoxContainer.new()
+	trow.add_theme_constant_override("separation", 10)
+	var tl := UITheme.label("", 16, UITheme.GOLD)
+	trow.add_child(tl)
+	var do_town := func():
+		world.upgrade_town(p, isl)
+		_refresh_dynamic()
+	var ub := UITheme.button("", do_town, 14)
+	trow.add_child(ub)
+	page_o.add_child(trow)
+	var _upd_town := func():
+		var lv: int = isl.town_level
+		tl.text = "%s (level %d/%d)" % [Data.TOWN_LEVELS[lv - 1]["name"], lv, Data.TOWN_LEVELS.size()]
+		if isl.town_upgrade_left > 0.0:
+			ub.text = "Growing into a %s ... %d days" % [Data.TOWN_LEVELS[lv]["name"].to_lower(), int(ceilf(isl.town_upgrade_left))]
+			ub.disabled = true
+			ub.tooltip_text = ""
+		elif lv >= Data.TOWN_LEVELS.size():
+			ub.text = "Largest town size"
+			ub.disabled = true
+		else:
+			var nxt: Dictionary = Data.TOWN_LEVELS[lv]
+			var cost: Dictionary = isl.upgrade_cost(p)
+			ub.text = "Upgrade to %s" % nxt["name"]
+			ub.disabled = not Game.can_afford_at(p, isl, cost)
+			ub.tooltip_text = "Upgrade to %s\nThe town grows by itself: new houses and a bigger town hall.\nHousing: %d people. Storage +%d.\nUnlocks: %s\n\nCost: %s\nTime: %d days" % [nxt["name"], nxt["housing"], int(nxt["storage"] - Data.TOWN_LEVELS[lv - 1]["storage"]), _unlocks_text(lv + 1), Data.cost_text(cost), int(nxt["time"])]
+	_dynamic.append(_upd_town)
 	# Befolkning och arbetare
 	var popl := UITheme.label("", 14)
 	page_o.add_child(popl)
@@ -644,22 +676,25 @@ func _build_island_info(isl) -> void:
 	ob.item_selected.connect(func(idx): isl.governor_focus = ob.get_item_metadata(idx))
 	gov.add_child(ob)
 	page_o.add_child(gov)
-	# Byggmeny
-	page_b.add_child(UITheme.label("Build", 17, UITheme.GOLD))
+	# Resursplatser: klicka på resurser på ön eller bygg härifrån
+	page_r.add_child(UITheme.wrap_label("Click a resource on the island (or use the list) to build or upgrade its building.", 13, UITheme.DIM))
+	for si in isl.sites.size():
+		page_r.add_child(_site_row(isl, si))
+	# Stadsbyggnader: placeras automatiskt på sin plats i staden
+	page_b.add_child(UITheme.wrap_label("Town buildings are placed automatically in the right spot – the shipyard in the harbour, the lighthouse on the headland.", 13, UITheme.DIM))
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 4)
 	grid.add_theme_constant_override("v_separation", 4)
 	page_b.add_child(grid)
-	for type in Data.BUILD_ORDER:
+	for type in Data.TOWN_REQ:
 		var def: Dictionary = Data.BUILDINGS[type]
-		if def.has("deposit") and not isl.deposits.has(def["deposit"]):
-			continue
 		var b := UITheme.button(def["name"], _on_build.bind(isl, type), 13)
 		b.custom_minimum_size = Vector2(144, 30)
 		grid.add_child(b)
 		var _upd4 := func():
 			var unlocked := Game.building_unlocked(p, type)
+			var need_lv: int = Data.TOWN_REQ[type]
 			var cost := Game.building_cost(p, type)
 			var tip := "%s\n%s\n\nCost: %s" % [def["name"], def["desc"], Data.cost_text(cost)]
 			var prod: Dictionary = def["prod"]
@@ -672,15 +707,19 @@ func _build_island_info(isl) -> void:
 				tip += "\nConsumes: %s per day" % Data.cost_text(def["consumes"])
 			if not unlocked:
 				tip += "\n\nRequires research: %s" % Data.RESEARCH[def["research"]]["name"]
+			elif isl.town_level < need_lv:
+				tip += "\n\nRequires a %s." % Data.TOWN_LEVELS[need_lv - 1]["name"].to_lower()
 			elif not isl.can_build_type(type):
-				tip += "\n\nNo free plot" + (" on the coast." if def.get("coastal", false) else ".")
+				tip += "\n\nAlready built."
 			b.tooltip_text = tip
 			b.disabled = not unlocked or not isl.can_build_type(type) or not Game.can_afford_at(p, isl, cost)
-			b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6)
+			b.modulate = Color(1, 1, 1) if unlocked and isl.town_level >= need_lv else Color(0.6, 0.6, 0.6)
 		_dynamic.append(_upd4)
 	# Byggnader på ön
 	var counts := {}
 	for bld in isl.buildings:
+		if bld.type == "hus" or bld.type == "dekor":
+			continue
 		counts[bld.type] = counts.get(bld.type, 0) + 1
 	var parts: Array = []
 	for t in counts:
@@ -720,6 +759,88 @@ func _build_island_info(isl) -> void:
 					names.append(Data.SHIPS[e["type"]]["name"])
 				q.text = "Queue: %s  (next one ready in %d days)" % [", ".join(names), int(ceilf(isl.ship_queue[0]["left"]))]
 		_dynamic.append(_upd6)
+func _unlocks_text(lv: int) -> String:
+	var out: Array = []
+	for t in Data.TOWN_REQ:
+		if Data.TOWN_REQ[t] == lv:
+			out.append(Data.BUILDINGS[t]["name"])
+	if lv >= 2 and lv <= 3:
+		out.append("resource buildings level %d" % lv)
+	return ", ".join(out) if out.size() > 0 else "more people"
+
+
+## En rad i resurslistan: plats, status och knapp för att bygga eller uppgradera.
+func _site_row(isl, i: int) -> Control:
+	var p := Game.player
+	var st: Dictionary = isl.sites[i]
+	var row := PanelContainer.new()
+	var hl: bool = _focus_island == isl and _focus_site == i
+	row.add_theme_stylebox_override("panel", UITheme.box(Color(0.3, 0.22, 0.1, 0.6) if hl else Color(0, 0, 0, 0.2), UITheme.GOLD if hl else Color(0, 0, 0, 0), 1, 4, 4.0))
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	row.add_child(hb)
+	hb.add_child(ResIcon.new(st["res"] if st["res"] != "fisk" else "fisk", 22.0))
+	var info := UITheme.label("", 14)
+	info.custom_minimum_size.x = 300
+	hb.add_child(info)
+	var do_site := func():
+		var sb = isl.sites[i]["b"]
+		if sb == null:
+			world.build_at_site(p, isl, i)
+		else:
+			world.upgrade_building(p, isl, sb)
+		_refresh_dynamic()
+	var btn := UITheme.button("", do_site, 13)
+	btn.custom_minimum_size = Vector2(200, 28)
+	hb.add_child(btn)
+	var _upd_site := func():
+		var b = isl.sites[i]["b"]
+		var type: String = Data.SITES[st["res"]]["building"]
+		var def: Dictionary = Data.BUILDINGS[type]
+		if b == null:
+			info.text = Data.SITES[st["res"]]["name"]
+			var cost := Game.building_cost(p, type)
+			btn.text = "Build %s" % def["name"]
+			var unlocked := Game.building_unlocked(p, type)
+			btn.disabled = not unlocked or not Game.can_afford_at(p, isl, cost)
+			btn.tooltip_text = "%s\n%s\nCost: %s" % [def["name"], def["desc"], Data.cost_text(cost)]
+			if not unlocked:
+				btn.tooltip_text += "\nRequires research: %s" % Data.RESEARCH[def["research"]]["name"]
+		else:
+			var state := ""
+			if not b.built:
+				state = " – building ..."
+			elif b.upgrading:
+				state = " – upgrading ..."
+			info.text = "%s, level %d%s" % [def["name"], b.level, state]
+			if b.level >= 3:
+				btn.text = "Max level"
+				btn.disabled = true
+				btn.tooltip_text = ""
+			else:
+				var cost: Dictionary = world.site_upgrade_cost(p, b)
+				btn.text = "Upgrade to level %d" % (b.level + 1)
+				var need_town: bool = isl.town_level >= b.level + 1
+				btn.disabled = not b.built or b.upgrading or not need_town or not Game.can_afford_at(p, isl, cost)
+				btn.tooltip_text = "Level %d: %d%% production, more workers.\nCost: %s" % [b.level + 1, int(Data.RES_LEVEL_PROD[b.level] * 100.0), Data.cost_text(cost)]
+				if not need_town:
+					btn.tooltip_text += "\nRequires a %s." % Data.TOWN_LEVELS[b.level]["name"].to_lower()
+	_dynamic.append(_upd_site)
+	return row
+
+
+## Klick på en resurs ute på ön: visa öns resursflik med platsen markerad.
+var _focus_island = null
+var _focus_site := -1
+
+
+func focus_site(isl, si: int) -> void:
+	_focus_island = isl
+	_focus_site = si
+	_island_tab = 1
+	_rebuild_info()
+
+
 func _on_build(isl, type: String) -> void:
 	if world.build(Game.player, isl, type):
 		Game.say("Building a %s on %s." % [Data.BUILDINGS[type]["name"].to_lower(), isl.display_name], Color(0.85, 0.85, 0.75))
@@ -862,7 +983,7 @@ func toggle_menu() -> void:
 		return
 	show_popup({
 		"title": "Island Colony – menu",
-		"text": "%s\n%s\nPilot version 0.4" % [Data.nation_name(Game.player), Game.date_text()],
+		"text": "%s\n%s\nPilot version 0.5" % [Data.nation_name(Game.player), Game.date_text()],
 		"buttons": [
 			{"text": "Continue", "cb": Callable()},
 			{"text": "Help and controls", "cb": show_help},

@@ -78,8 +78,8 @@ func _economy() -> void:
 	var start := _day % my.size()
 	for k in my.size():
 		var isl = my[(start + k) % my.size()]
-		var t: String = Governor.choose(nation, isl, world, pers.get("focus", "balans"), 30.0)
-		if t != "" and world.build(nation, isl, t):
+		var act: Dictionary = Governor.choose(nation, isl, world, pers.get("focus", "balans"), 30.0)
+		if not act.is_empty() and world.do_action(nation, isl, act):
 			built += 1
 			if built >= 2:
 				return
@@ -251,12 +251,15 @@ func _admirals_and_upgrades(fleet: Array, home) -> void:
 					world.assign_admiral(best, free[0])
 				else:
 					world.recruit_admiral(best)
-	if Game.res(nation, "guld") > 450.0:
+	if Game.res(nation, "guld") > 600.0:
 		for s in fleet:
 			if s.order != "idle":
 				continue
+			var yard = world.upgrade_island(s)
+			if yard == null or yard.good("sten") < 150.0 or yard.good("tra") < 200.0:
+				continue
 			for key in ["koppar", "kanoner", "segel"]:
-				if not s.upgrades.has(key) and world.upgrade_island(s) != null:
+				if not s.upgrades.has(key):
 					if world.upgrade_ship(s, key):
 						return
 

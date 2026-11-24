@@ -109,11 +109,10 @@ func _setup_nations() -> void:
 		var def: Dictionary = Data.NATIONS[n]
 		var isl = island_by_id(def["home"])
 		isl.set_owner_id(n)
-		isl.add_building("radhus", true)
+		isl.set_town_level(2, true)
 		isl.add_building("skeppsvarv", true)
 		isl.add_building("skogshuggare", true)
 		isl.add_building("kokosodling", true)
-		isl.add_building("bosattning", true)
 		isl.garrison = isl.max_garrison()
 		isl.store = {"tra": 160.0, "mat": 140.0, "sten": 40.0}
 		isl.population = 26.0
@@ -126,7 +125,7 @@ func _setup_nations() -> void:
 	var sol = island_by_id("solstenson")
 	if Game.settings["crises"].get("vaktarna", false):
 		sol.set_owner_id("vaktarna")
-		sol.add_building("radhus", true)
+		sol.set_town_level(3, true)
 		sol.add_building("kanonbatteri", true)
 		sol.add_building("kanonbatteri", true)
 		sol.add_building("akademi", true)
@@ -169,6 +168,68 @@ func count_buildings(nation: String, type: String) -> int:
 			if b.type == type:
 				c += 1
 	return c
+
+
+# ------------------------------------------------------------------ Bygga, uppgradera, resursplatser
+func build_at_site(nation: String, isl, i: int) -> bool:
+	if isl.owner_id != nation or i < 0 or i >= isl.sites.size() or isl.sites[i]["b"] != null:
+		return false
+	var type: String = Data.SITES[isl.sites[i]["res"]]["building"]
+	if not Game.building_unlocked(nation, type):
+		return false
+	var cost := Game.building_cost(nation, type)
+	if not Game.pay_at(nation, isl, cost):
+		return false
+	isl.build_site(i)
+	return true
+
+
+func site_upgrade_cost(nation: String, b) -> Dictionary:
+	if b == null or b.level >= 3:
+		return {}
+	var base: Dictionary = Data.BUILDINGS[b.type]["cost"]
+	var f: float = Data.RES_LEVEL_COST[b.level] * Game.mod(nation, "build_cost")
+	var out := {}
+	for r in base:
+		out[r] = ceilf(base[r] * f)
+	out["sten"] = out.get("sten", 0.0) + Data.RES_LEVEL_STONE[b.level]
+	return out
+
+
+func upgrade_building(nation: String, isl, b) -> bool:
+	if b == null or b.level >= 3 or b.upgrading or not b.built or isl.owner_id != nation:
+		return false
+	if isl.town_level < b.level + 1:
+		return false  # nivå 2 kräver by, nivå 3 kräver stad
+	if not Game.pay_at(nation, isl, site_upgrade_cost(nation, b)):
+		return false
+	b.begin_upgrade(Data.BUILDINGS[b.type].get("time", 8.0) * (1.0 + b.level))
+	return true
+
+
+func upgrade_town(nation: String, isl) -> bool:
+	if isl.owner_id != nation or isl.town_level <= 0 or isl.town_level >= Data.TOWN_LEVELS.size() or isl.town_upgrade_left > 0.0:
+		return false
+	if not Game.pay_at(nation, isl, isl.upgrade_cost(nation)):
+		return false
+	isl.start_town_upgrade()
+	if nation == Game.player:
+		Game.say("%s is growing into a %s." % [isl.display_name, Data.TOWN_LEVELS[isl.town_level]["name"].to_lower()], Color(0.8, 0.95, 0.8))
+	return true
+
+
+## Utför ett beslut från guvernören eller AI:n.
+func do_action(nation: String, isl, action: Dictionary) -> bool:
+	match action.get("kind", ""):
+		"town":
+			return upgrade_town(nation, isl)
+		"build":
+			return build(nation, isl, action["type"])
+		"site":
+			return build_at_site(nation, isl, action["index"])
+		"site_up":
+			return upgrade_building(nation, isl, isl.sites[action["index"]]["b"])
+	return false
 
 
 func nation_strength(nation: String) -> float:
@@ -287,7 +348,7 @@ func try_colonize(ship, isl) -> void:
 			Game.say("Cannot afford to colonize %s (requires %s)." % [isl.display_name, Data.cost_text(cost)], Color(1, 0.6, 0.5))
 		return
 	isl.set_owner_id(n)
-	isl.add_building("radhus", true)
+	isl.set_town_level(1, false)
 	isl.garrison = isl.max_garrison() * 0.5
 	# Nybyggarna tar med sig förnödenheter från skeppet.
 	isl.population = 6.0
@@ -567,6 +628,7 @@ func _process(delta: float) -> void:
 		_vision_t = 0.25
 		_update_vision()
 	_update_wind(delta)
+	_update_hover()
 	var i := 0
 	while i < markers.size():
 		markers[i]["t"] -= delta / maxf(0.001, Engine.time_scale)
@@ -574,6 +636,25 @@ func _process(delta: float) -> void:
 			markers.remove_at(i)
 		else:
 			i += 1
+
+
+## Markerar resursplatsen under muspekaren (för klick och tooltip).
+var hovered_island = null
+
+
+func _update_hover() -> void:
+	var wp := get_global_mouse_position()
+	var found = null
+	for isl in islands:
+		if wp.distance_to(isl.position) < isl.radius + 60.0:
+			var si: int = isl.site_at(wp)
+			if isl.hover_site != si:
+				isl.hover_site = si
+			if si >= 0:
+				found = isl
+		elif isl.hover_site != -1:
+			isl.hover_site = -1
+	hovered_island = found
 
 
 func _update_wind(delta: float) -> void:
@@ -618,16 +699,20 @@ func _economy_day() -> void:
 			ir["mat"] = -food_need
 			if isl.population < housing:
 				isl.population = minf(housing, isl.population + maxf(0.4, housing * 0.025))
-			if isl.starving and n == Game.player:
-				Game.say("The people of %s have food again." % isl.display_name, Color(0.7, 1, 0.7))
-			isl.starving = false
+			# Svälten är över först när det finns mat för en tid framåt
+			if isl.starving and isl.good("mat") > food_need * 10.0 + 5.0:
+				isl.starving = false
+				if n == Game.player:
+					Game.say("The people of %s have food again." % isl.display_name, Color(0.7, 1, 0.7))
 		else:
 			isl.add_good("mat", -food_have)
 			ir["mat"] = -food_have
 			isl.population = maxf(0.0, isl.population - maxf(0.5, isl.population * 0.03))
-			if not isl.starving and n == Game.player:
-				Game.say("Famine on %s! People are leaving. Build coconut groves or fishing huts, or ship food there." % isl.display_name, Color(1, 0.55, 0.45))
-			isl.starving = true
+			if not isl.starving:
+				isl.starving = true
+				if n == Game.player and Game.time - isl.famine_warned > 60.0:
+					isl.famine_warned = Game.time
+					Game.say("Famine on %s! People are leaving. Build a coconut grove or fishing hut there, or ship food in." % isl.display_name, Color(1, 0.55, 0.45))
 		if isl.population > housing:
 			isl.population = maxf(housing, isl.population - 1.0)
 		var tax: float = isl.population * Data.TAX_PER_POP * Game.prod_mod(n, "guld")
@@ -639,18 +724,19 @@ func _economy_day() -> void:
 			if not b.is_active():
 				continue
 			var bd: Dictionary = Data.BUILDINGS[b.type]
+			var lvl: float = Data.RES_LEVEL_PROD[b.level - 1]
 			var cons: Dictionary = bd.get("consumes", {})
 			var ok := true
 			for c in cons:
-				if isl.good(c) < cons[c] * eff:
+				if isl.good(c) < cons[c] * eff * lvl:
 					ok = false
 			if not ok:
 				continue
 			for c in cons:
-				isl.add_good(c, -cons[c] * eff)
-				ir[c] = ir.get(c, 0.0) - cons[c] * eff
+				isl.add_good(c, -cons[c] * eff * lvl)
+				ir[c] = ir.get(c, 0.0) - cons[c] * eff * lvl
 			for pr in bd["prod"]:
-				var amount: float = bd["prod"][pr] * Game.prod_mod(n, pr) * eff
+				var amount: float = bd["prod"][pr] * Game.prod_mod(n, pr) * eff * lvl
 				if pr == "guld" and bd.get("market", false):
 					amount *= Game.mod(n, "trade")
 				if Game.is_national(pr):
@@ -672,6 +758,14 @@ func _economy_day() -> void:
 		for k in ir:
 			r[k] = r.get(k, 0.0) + ir[k]
 		isl.garrison = move_toward(isl.garrison, isl.max_garrison(), 0.5 + isl.max_garrison() * 0.01)
+		if isl.town_upgrade_left > 0.0:
+			isl.town_upgrade_left -= 1.0
+			if isl.town_upgrade_left <= 0.0:
+				isl.town_upgrade_left = 0.0
+				isl.set_town_level(isl.town_level + 1, false)
+				fx.text(isl.position + isl.town_center + Vector2(0, -60), Data.TOWN_LEVELS[isl.town_level - 1]["name"] + "!", Color(1, 0.9, 0.5))
+				if n == Game.player:
+					Game.say("%s is now a %s! New houses are going up." % [isl.display_name, Data.TOWN_LEVELS[isl.town_level - 1]["name"].to_lower()], Color(1, 0.9, 0.55))
 		# Skeppsvarvets kö
 		if isl.ship_queue.size() > 0 and isl.has_shipyard():
 			var q: Dictionary = isl.ship_queue[0]
@@ -687,9 +781,9 @@ func _economy_day() -> void:
 					ais[n].on_ship_built(s)
 		# Guvernören bygger på spelarens öar
 		if n == Game.player and isl.governor and Game.day() % 3 == 0:
-			var t: String = GovernorScript.choose(n, isl, self, isl.governor_focus, 120.0)
-			if t != "" and build(n, isl, t):
-				Game.say("The governor of %s is building a %s." % [isl.display_name, Data.BUILDINGS[t]["name"].to_lower()], Color(0.8, 0.85, 0.75))
+			var act: Dictionary = GovernorScript.choose(n, isl, self, isl.governor_focus, 120.0)
+			if not act.is_empty() and do_action(n, isl, act):
+				Game.say("The governor of %s: %s." % [isl.display_name, GovernorScript.describe(isl, act)], Color(0.8, 0.85, 0.75))
 	# Handelsavtal mellan nationer
 	for k in Game.relations:
 		var rel: Dictionary = Game.relations[k]
@@ -853,6 +947,9 @@ func _click_select(wp: Vector2, add: bool) -> void:
 	var isl = island_at(wp)
 	if isl != null and fog.is_explored(isl.position):
 		select_island(isl)
+		var si: int = isl.site_at(wp)
+		if si >= 0:
+			hud.focus_site(isl, si)
 		return
 	if s != null:
 		clear_selection()

@@ -68,3 +68,14 @@ Spelet är på engelska (från version 0.4). Titel: **Island Colony**. Dokumente
 Ö-namn på engelska: Crownholm, Black Reef, Kaluma, Porto Solmar, Coconut Isle, The Sandbank, Beacon Skerry,
 Stone Cairn, Turtle Isle, Mangrove Holm, Emerald Isle, Crystal Reef, Parrot Isle, Sunset Isle, Dead Man's Chest,
 Pearl Bay, Ghost Skerry, Shark's Tooth och Sunstone Isle. Havet heter the Emerald Sea.
+
+## Städer och resursplatser (version 0.5)
+| Område | Hur det fungerar |
+|---|---|
+| Stadsplan | Varje ö har en färdigplanerad stad: rådhus och torg i mitten, hamn mot havet, platser för lagerhus, marknad, akademi, industri, kanonbatterier, fyr och vakttorn, och hus i ringar runt torget |
+| Stadsnivåer | Outpost (tältläger) → Village → Town → City → Capital. Varje nivå ger nytt rådhus, fler hus (byggs ett i taget med animation), finare hus, torg med fontän (Town) och vakttorn (City). Mer bostäder, lager och garnison |
+| Stadsbyggnader | Placeras automatiskt på sin plats: skeppsvarv i hamnen, fyr på udden, batterier vid kusten. Kräver viss stadsnivå (t.ex. marknad och akademi kräver Village, glasbruk och fyr kräver Town) |
+| Resursplatser | Skog, kokospalmer, fiskevatten, sten, sand, sockerrör, kryddor, pärlrev, kristaller och guld syns på ön med en ikon. Klicka för att bygga resursbyggnaden |
+| Nivåer på resursbyggnader | Nivå 1–3 (170 % och 250 % produktion, fler arbetare). Nivå 2 kräver Village, nivå 3 kräver Town |
+| Ingen egen placering | Spelaren väljer vad som byggs, aldrig var |
+| Animationer | Byggnader reser sig ur byggställningar med arbetare och damm och studsar när de är klara. Arbetsanimationer: flisor (skogshuggare), kokosnötter som faller, fiskebåtar som ror ut, damm (stenbrott, sand), sockerrör som vajar, gnistor (kryddor, kristaller, varv), gruvvagn med guld, folk på marknaden, lådor vid lagret, fyrens ljusstråle, rök från skorstenar. Vägar från torget till alla byggnader och invånare som går på dem |

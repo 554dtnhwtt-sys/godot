@@ -7,12 +7,15 @@ var _variant := 1
 var _phase := 0.0
 var _scale := 0.4
 var _flip := false
+var force_variant := 0
 
 
 func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	_variant = 1 + rng.randi() % 4
+	if force_variant > 0:
+		_variant = force_variant
 	_scale = rng.randf_range(0.34, 0.48) * (0.8 if _variant == 4 else 1.0)
 	_phase = rng.randf() * TAU
 	_flip = rng.randf() < 0.5

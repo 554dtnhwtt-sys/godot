@@ -147,7 +147,9 @@ const ISLANDS := [
 ## prod = per sekund. consumes = förbrukas per sekund (krävs för produktion).
 ## deposit = kräver att ön har den resursen. research = kräver forskningen.
 const BUILDINGS := {
-	"radhus": {"name": "Governor's House", "desc": "The heart of the island. Gives gold, some research and housing for 10 people.", "cost": {}, "prod": {"guld": 1.5, "forskning": 0.4}, "housing": 10, "buildable": false, "garrison": 30, "fort": {"range": 360.0, "damage": 6.0, "reload": 3.6}, "time": 1.0, "workers": 0},
+	"radhus": {"name": "Town Hall", "desc": "The heart of the town. Gives gold and some research. Upgrade the town to make it grow.", "cost": {}, "prod": {"guld": 1.5, "forskning": 0.4}, "buildable": false, "garrison": 0, "fort": {"range": 360.0, "damage": 6.0, "reload": 3.6}, "time": 1.0, "workers": 0},
+	"hus": {"name": "House", "desc": "Homes for the townspeople.", "cost": {}, "prod": {}, "buildable": false, "time": 4.0, "workers": 0},
+	"dekor": {"name": "Town decoration", "desc": "", "cost": {}, "prod": {}, "buildable": false, "time": 4.0, "workers": 0},
 	"bosattning": {"name": "Settlement", "desc": "Homes for 20 settlers. The inhabitants work in your buildings and pay taxes.", "cost": {"tra": 30}, "prod": {}, "housing": 20, "time": 6.0, "workers": 0},
 	"skogshuggare": {"name": "Woodcutter", "desc": "Fells palms and hardwood.", "cost": {"guld": 20}, "prod": {"tra": 1.2}, "deposit": "tra", "time": 6.0, "workers": 4},
 	"kokosodling": {"name": "Coconut Grove", "desc": "Coconuts and fruit to feed the people.", "cost": {"tra": 25}, "prod": {"mat": 1.2}, "deposit": "mat", "time": 6.0, "workers": 4},
@@ -168,8 +170,41 @@ const BUILDINGS := {
 	"lagerhus": {"name": "Warehouse", "desc": "Increases the island's storage by 300 for every good.", "cost": {"tra": 40, "sten": 10}, "prod": {}, "storage": 300, "time": 7.0, "workers": 2},
 	"glasbruk": {"name": "Glassworks", "desc": "Melts sand into glass that sells for gold.", "cost": {"tra": 50, "sten": 30}, "prod": {"guld": 2.2}, "consumes": {"sand": 0.8}, "research": "glasbruk", "time": 10.0, "workers": 6},
 }
-const BUILD_ORDER := ["bosattning", "lagerhus", "skogshuggare", "kokosodling", "fiskehydda", "sandtakt", "stenbrott", "sockerplantage", "romdestilleri", "kryddgard", "parldykare", "kristallgruva", "guldgruva", "marknad", "glasbruk", "akademi", "skeppsvarv", "kanonbatteri", "fyrtorn"]
-const COST_GROWTH := 1.15
+const BUILD_ORDER := ["lagerhus", "skogshuggare", "kokosodling", "fiskehydda", "sandtakt", "stenbrott", "sockerplantage", "romdestilleri", "kryddgard", "parldykare", "kristallgruva", "guldgruva", "marknad", "glasbruk", "akademi", "skeppsvarv", "kanonbatteri", "fyrtorn"]
+const COST_GROWTH := 1.05
+
+# ---------------------------------------------------------------- Städer och resursplatser
+## Varje ö har en färdigplanerad stad. Uppgraderas staden växer den av sig själv:
+## fler hus, ett större rådhus och (på högre nivåer) torg och vakttorn.
+const TOWN_LEVELS := [
+	{"name": "Outpost", "hall": "hall1", "housing": 20, "houses": 2, "tier": 0, "cost": {}, "time": 0.0, "garrison": 10, "storage": 0},
+	{"name": "Village", "hall": "hall2", "housing": 50, "houses": 5, "tier": 0, "cost": {"tra": 80, "mat": 40, "guld": 100}, "time": 15.0, "garrison": 20, "storage": 100},
+	{"name": "Town", "hall": "hall3", "housing": 100, "houses": 9, "tier": 1, "cost": {"tra": 160, "sten": 60, "guld": 250}, "time": 25.0, "garrison": 35, "storage": 250},
+	{"name": "City", "hall": "hall4", "housing": 170, "houses": 14, "tier": 2, "cost": {"tra": 300, "sten": 160, "sand": 60, "guld": 600}, "time": 35.0, "garrison": 55, "storage": 450},
+	{"name": "Capital", "hall": "hall5", "housing": 260, "houses": 20, "tier": 3, "cost": {"tra": 500, "sten": 300, "sand": 120, "kristaller": 15, "guld": 1200}, "time": 50.0, "garrison": 80, "storage": 700},
+]
+## Husbilder per nivå (hyddor -> hus -> stenhus -> herrgårdar).
+const HOUSE_TIERS := [["hut1", "hut2", "hut3"], ["hut2", "house1", "house2", "house3"], ["house1", "house2", "house3", "townhouse"], ["townhouse", "mansion", "house3", "chapel"]]
+## Stadsbyggnader placeras automatiskt på sin plats i staden. Kräver en viss stadsnivå.
+const TOWN_REQ := {"skeppsvarv": 1, "lagerhus": 1, "marknad": 2, "akademi": 2, "kanonbatteri": 2, "romdestilleri": 2, "glasbruk": 3, "fyrtorn": 3}
+## Resursplatser på öarna och vilken byggnad som byggs där.
+const SITES := {
+	"tra": {"name": "Forest", "building": "skogshuggare"},
+	"mat": {"name": "Coconut palms", "building": "kokosodling"},
+	"fisk": {"name": "Fishing waters", "building": "fiskehydda"},
+	"sten": {"name": "Stone deposit", "building": "stenbrott"},
+	"sand": {"name": "Sand dunes", "building": "sandtakt"},
+	"socker": {"name": "Wild sugar cane", "building": "sockerplantage"},
+	"kryddor": {"name": "Wild spices", "building": "kryddgard"},
+	"parlor": {"name": "Pearl reef", "building": "parldykare"},
+	"kristaller": {"name": "Crystal vein", "building": "kristallgruva"},
+	"guld": {"name": "Gold vein", "building": "guldgruva"},
+}
+## Resursbyggnader kan uppgraderas till nivå 3.
+const RES_LEVEL_PROD := [1.0, 1.7, 2.5]
+const RES_LEVEL_WORKERS := [1.0, 1.5, 2.0]
+const RES_LEVEL_COST := [1.0, 2.0, 4.0]
+const RES_LEVEL_STONE := [0.0, 20.0, 60.0]
 
 # ---------------------------------------------------------------- Ekonomi per ö
 ## Guld och forskning är gemensamma för nationen. Alla andra varor ligger i varje ös lager.

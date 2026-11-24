@@ -72,3 +72,13 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
   diplomati, händelser, kriser, meddelanden och hjälp.
 - Projektet heter nu Island Colony. README på engelska, dokumenten här på svenska.
 - Testat: inga fel i 900 speldagar.
+
+## 24 november – pilot 0.5: färdigplanerade städer
+- Genererade ny grafik i Runway (8 krediter, 75 kvar): 5 rådhus (tältläger → palats), lagerhus, torg med fontän,
+  vakttorn, stadsmur, 3 hyddor, 3 hus, stenhus, herrgård och kapell.
+- Byggde om byggsystemet: färdig stadsplan per ö, stadsnivåer som växer av sig själv, resursplatser att klicka på,
+  nivåer 1–3 för resursbyggnader och automatisk placering av stadsbyggnader.
+- Animationer för byggen, uppgraderingar och arbete i alla byggnader. Vägar och invånare som går omkring.
+- Öpanelen har nu flikarna Town, Resources, Build och Shipyard.
+- Guvernören och AI:n uppgraderar städer, bygger på resursplatser och sparar till nästa stadsnivå.
+- Testat: inga fel i 1400 speldagar.

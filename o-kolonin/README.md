@@ -1,4 +1,4 @@
-# Island Colony – pilot 0.4
+# Island Colony – pilot 0.5
 
 A colony-building and naval strategy game in a Caribbean archipelago, made with Godot 4.7.
 (Swedish: spelets text är på engelska. Dokumenten i `docs/` är på svenska.)
