@@ -27,8 +27,6 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	if Game.world != null and Game.world.view3d != null:
-		return  # palmen visas i 3D-lagret
 	var tex: Texture2D = Art.deco("palm%d" % _variant)
 	if tex == null:
 		return

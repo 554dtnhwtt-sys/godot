@@ -12,7 +12,6 @@ const EventsScript = preload("res://scripts/world/events.gd")
 const HudScript = preload("res://scripts/ui/hud.gd")
 const AmbientScript = preload("res://scripts/world/ambient.gd")
 const GovernorScript = preload("res://scripts/world/governor.gd")
-const View3DScript = preload("res://scripts/world3d/view3d.gd")
 const Governor = GovernorScript
 
 ## Flottans formation när skepp får en förflyttningsorder: linje, kil, spridd.
@@ -31,7 +30,6 @@ var cam: Camera2D = null
 var hud = null
 var events = null
 var overlay = null
-var view3d = null      # 3D-lagret med skepp, städer och byggnader
 var objects: Node2D = null
 var ais := {}
 var markers: Array = []
@@ -43,6 +41,7 @@ var _vision_t := 0.0
 var _wind_target := 0.0
 var _player_dead_announced := false
 var formation := "linje"
+var view_rect := Rect2()   # det som syns på skärmen (världskoordinater)
 
 
 func _ready() -> void:
@@ -90,10 +89,6 @@ func _ready() -> void:
 	cam.make_current()
 	var home = island_by_id(Data.NATIONS[Game.player]["home"])
 	cam.focus(home.position + Vector2(0, 60))
-	var v3 := View3DScript.new()
-	add_child(v3)
-	v3.setup(self)
-	view3d = v3
 	for n in Game.nations:
 		if Game.nations[n]["ai"]:
 			var ai := AIScript.new()
@@ -624,6 +619,7 @@ func _check_elimination() -> void:
 
 # ------------------------------------------------------------------ Uppdatering
 func _process(delta: float) -> void:
+	view_rect = get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_visible_rect()
 	Game.time += delta / Data.DAY_SECONDS
 	var d := Game.day()
 	if d != _last_day:

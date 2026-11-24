@@ -225,6 +225,9 @@ func _process(delta: float) -> void:
 	_t += delta
 	_flash_l = maxf(0.0, _flash_l - delta)
 	_flash_r = maxf(0.0, _flash_r - delta)
+	if not is_monster():
+		ShipArt.update(self, delta)
+		_fire_smoke(delta)
 	if sinking > 0.0:
 		sinking += delta
 		if sinking > 4.0:
@@ -241,10 +244,11 @@ func _process(delta: float) -> void:
 	if _wake_timer <= 0.0:
 		_wake_timer = 0.12
 		if speed > 15.0:
-			_wake.push_front(position + Vector2.from_angle(heading + PI) * 20.0 * size_f)
+			var bk := Vector2(cos(heading), sin(heading) / Y_SQUASH).normalized() * (-_hull_len() * 0.42)
+			_wake.push_front(position + Vector2(bk.x, bk.y * Y_SQUASH))
 		elif _wake.size() > 0:
 			_wake.pop_back()
-		if _wake.size() > 14:
+		if _wake.size() > 18:
 			_wake.pop_back()
 	queue_redraw()
 	_top.queue_redraw()
@@ -399,16 +403,15 @@ func _broadside(side: int, tgt, tpos: Vector2, bld) -> void:
 	if Game.is_playable(owner_id) and Game.res(owner_id, "rom") > 1.0:
 		dmg *= 1.1
 		Game.add_res(owner_id, "rom", -0.02 * n)
-	var fwd := Vector2.from_angle(heading)
-	var nrm := Vector2.from_angle(heading + side * PI * 0.5)
+	var nrm := ShipArt.side_dir(self, side)
 	for i in n:
 		var t := (float(i) / maxf(1, n - 1)) - 0.5 if n > 1 else 0.0
-		var from := position + fwd * t * length * 0.6 + nrm * 9.0 * size_f
+		var from := ShipArt.cannon_port(self, side, t)
 		var target = tgt if tgt != null else tpos
 		world.fx.fire_cannonball(from, target, dmg, owner_id, bld, i * 0.07, spread_f, self)
-		world.fx.smoke(from + nrm * 10.0, 1)
-		if _three_d():
-			world.fx.flash(from + nrm * 6.0 + Vector2(0, -L_DECK * size_f), i * 0.07)
+		world.fx.cannon_smoke(from + nrm * 6.0, nrm, i * 0.07, length / 86.0)
+	# Rekylen får skeppet att kränga bort från bredsidan
+	art_kick = -0.07 * side
 	if side == -1:
 		_flash_l = 0.15
 	else:
@@ -508,119 +511,91 @@ func take_damage(amount: float, attacker: String, src = null) -> void:
 		hp = 0.0
 		sinking = 0.001
 		selected = false
+		art_sink_side = 1.0 if randf() < 0.5 else -1.0
+		if not is_monster():
+			world.fx.wreck(position, _hull_len())
 		if src != null and is_instance_valid(src):
 			src.gain_xp(40.0 + max_hp * 0.1)
 		world.on_ship_sunk(self, attacker, src)
 
 
+## Svart rök stiger från bränder ombord.
+func _fire_smoke(delta: float) -> void:
+	if sinking > 0.0 or hp >= max_hp * 0.5 or not visible:
+		return
+	_smoke_t -= delta / maxf(0.001, Engine.time_scale)
+	if _smoke_t > 0.0:
+		return
+	_smoke_t = 0.35 if hp < max_hp * 0.25 else 0.6
+	var L := _hull_len()
+	var f := Vector2(cos(heading), sin(heading) / Y_SQUASH).normalized()
+	world.fx.fire_smoke(position + Vector2(f.x, f.y * Y_SQUASH) * (-0.18 * L) - Vector2(0, L * 0.1), L / 86.0)
+
+
 # ------------------------------------------------------------------ Rita
-const SHIP_SHADER = preload("res://shaders/ship.gdshader")
-const L_DECK := 6.0  # kanonernas höjd över vattnet på skärmen (3D)
+const ShipArt = preload("res://scripts/world/ship_art.gd")
+
+# Seglens och skrovets animation (uppdateras av ShipArt.update)
+var art_fill := 0.5
+var art_furl := 0.0
+var art_brace := 0.0
+var art_side := 1.0
+var art_rel := 0.0
+var art_heel := 0.0
+var art_kick := 0.0
+var art_last_heading := 0.0
+var art_sink_side := 1.0
+var _smoke_t := 0.0
 
 
 func _hull_len() -> float:
 	return 86.0 * size_f
 
 
-func _ensure_material() -> void:
-	if material != null:
-		return
-	var m := ShaderMaterial.new()
-	m.shader = SHIP_SHADER
-	var sail := Color(1, 1, 1)
-	var strength := 0.0
-	match owner_id:
-		"svartarevet", "vildpirater":
-			sail = Color(0.24, 0.22, 0.22)
-			strength = 1.0
-		"djupkulten":
-			sail = Color(0.35, 0.18, 0.42)
-			strength = 1.0
-		"valdoria":
-			sail = Color(0.92, 0.94, 1.0)
-			strength = 0.5
-		"solmar":
-			sail = Color(1.0, 0.9, 0.75)
-			strength = 0.6
-		"kaluma":
-			sail = Color(0.95, 0.88, 0.72)
-			strength = 0.5
-	m.set_shader_parameter("sail_color", sail)
-	m.set_shader_parameter("tint_strength", strength)
-	material = m
+## Detaljnivå efter zoom: 0 = långt ut, 2 = nära.
+func _lod() -> int:
+	var z: float = world.cam.zoom.x if world != null and world.cam != null else 1.0
+	if z < 0.3:
+		return 0
+	if z < 0.5:
+		return 1
+	return 2
 
 
-func _three_d() -> bool:
-	return world != null and world.view3d != null
+func _on_screen() -> bool:
+	if world == null or world.cam == null:
+		return true
+	var vr: Rect2 = world.view_rect
+	return vr.size == Vector2.ZERO or vr.grow(_hull_len() * 1.2).has_point(position)
 
 
 func _draw() -> void:
 	if is_monster():
 		_draw_kraken()
 		return
+	if not _on_screen():
+		return
 	var sink_k: float = clampf(sinking / 4.0, 0.0, 1.0)
 	var L := _hull_len()
-	var fwd := Vector2.from_angle(heading)
-	var right := fwd.orthogonal()
-	var ghost: bool = def.get("ghost", false)
-	var crystal: bool = def.get("crystal", false)
-	var alpha := 1.0 - sink_k * 0.85
-	if ghost:
-		alpha *= 0.72 + 0.18 * sin(_t * 2.0)
-	_draw_wake(fwd, right, L, alpha)
-	# Glöd på vattnet för spök- och kristallskepp
-	if ghost or crystal:
-		var gc := Color(0.45, 1.0, 0.75, 0.16 * alpha) if ghost else Color(0.5, 0.9, 1.0, 0.16 * alpha)
-		draw_set_transform(Vector2.ZERO, heading, Vector2(1, 0.55))
-		draw_circle(Vector2.ZERO, L * 0.62 + sin(_t * 3.0) * 3.0, gc)
-		draw_set_transform(Vector2.ZERO)
-	if not _three_d():
-		_draw_sprite(sink_k, L, fwd, alpha)
-	# Markering på vattnet runt skeppet
+	# Markering: en ring på vattnet runt skeppet
 	if selected:
+		var f := Vector2(cos(heading), sin(heading) / Y_SQUASH).normalized()
+		var r := Vector2(-f.y, f.x)
 		var ring := PackedVector2Array()
 		for i in 33:
 			var a := TAU * i / 32.0
-			ring.append(fwd * cos(a) * L * 0.62 + right * sin(a) * L * 0.3)
+			var g := f * cos(a) * L * 0.62 + r * sin(a) * L * 0.3
+			ring.append(Vector2(g.x, g.y * Y_SQUASH))
 		draw_polyline(ring, Color(0.6, 1.0, 0.6, 0.55 + 0.25 * sin(_t * 4.0)), 2.0, true)
+	ShipArt.draw(self, self, _lod())
 	if sinking > 0.0:
-		for i in 5:
-			var k := fmod(_t * 1.5 + i * 0.2, 1.0)
-			draw_circle(Vector2(sin(i * 2.3) * 16.0, -k * 18.0 + 8.0), 2.5 + k * 3.0, Color(1, 1, 1, 0.55 * (1.0 - k)))
-		draw_arc(Vector2.ZERO, L * 0.3 + sink_k * L * 0.4, 0, TAU, 28, Color(1, 1, 1, 0.5 * (1.0 - sink_k)), 2.0)
-
-
-## Det målade skeppet (används bara om 3D-lagret saknas).
-func _draw_sprite(sink_k: float, L: float, fwd: Vector2, alpha: float) -> void:
-	_ensure_material()
-	var tex: Texture2D = Art.ship(type)
-	if tex == null:
-		return
-	var sc := L / tex.get_width()
-	var half := tex.get_size() * 0.5
-	var bob := sin(_t * 1.7 + position.x * 0.013)
-	var roll := sin(_t * 1.25 + position.y * 0.011) * 0.025 + sink_k * 0.4
-	var lean := clampf(angle_difference(heading, Game.wind_angle), -1.0, 1.0) * 0.04
-	draw_set_transform(Vector2(6, 8), heading + roll, Vector2(sc, sc * 0.9))
-	draw_texture(tex, -half, Color(0.0, 0.06, 0.12, 0.3 * alpha))
-	draw_set_transform(Vector2(0, bob * 1.3), heading + roll + lean, Vector2(sc * (1.0 + bob * 0.012), sc * (1.0 - sink_k * 0.45)))
-	draw_texture(tex, -half, Color(1, 1, 1, alpha))
-	if _flash_l > 0.0 or _flash_r > 0.0:
-		var side := -1.0 if _flash_l > 0.0 else 1.0
-		var k := (_flash_l if _flash_l > 0.0 else _flash_r) / 0.15
-		for i in 4:
-			var t := (i - 1.5) / 4.0
-			var fp := Vector2(t * tex.get_width() * 0.6, side * tex.get_height() * 0.42)
-			draw_circle(fp, 22.0 * k, Color(1, 0.8, 0.3, 0.85 * k))
-	draw_set_transform(Vector2.ZERO)
-	if sinking <= 0.0:
-		var top := fwd * L * 0.04 + Vector2(0, bob * 1.3 - 2.0)
-		var wdir := Vector2.from_angle(Game.wind_angle)
-		var wn := wdir.orthogonal()
-		var wave := sin(_t * 7.0) * 2.0
-		var fl := 14.0 * clampf(size_f, 1.0, 1.6)
-		draw_colored_polygon(PackedVector2Array([top, top + wdir * fl + wn * wave, top + wdir * fl + wn * (6.0 + wave), top + wn * 6.0]), Color(Data.nation_color(owner_id), alpha))
-		draw_line(top + wn * 3.0, top + wdir * fl + wn * (3.0 + wave), Color(Data.nation_accent(owner_id), alpha), 1.5)
+		# Bubblor och skum där skeppet går ned
+		for i in 6:
+			var k := fmod(_t * 1.3 + i * 0.17, 1.0)
+			draw_circle(Vector2(sin(i * 2.3) * L * 0.2, cos(i * 1.7) * L * 0.08 - k * 10.0), 2.0 + k * 3.0, Color(1, 1, 1, 0.6 * (1.0 - k)))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, Y_SQUASH))
+		draw_arc(Vector2.ZERO, L * 0.35 + sink_k * L * 0.45, 0, TAU, 32, Color(1, 1, 1, 0.55 * (1.0 - sink_k)), 3.0)
+		draw_set_transform(Vector2.ZERO)
 
 
 ## Mätare, amiralsstjärna, erfarenhet och brand – ritas ovanför 3D-lagret.
@@ -629,7 +604,7 @@ func _draw_top(ci: CanvasItem) -> void:
 		return
 	var L := _hull_len()
 	var fwd := Vector2.from_angle(heading)
-	var lift := L * 0.72 + 8.0 if _three_d() else L * 0.38 + 16.0
+	var lift := L * 0.62 + 10.0
 	if selected or hp < max_hp - 0.5:
 		var bw := 40.0 * clampf(size_f, 1.0, 1.6)
 		var by := -lift
@@ -654,28 +629,7 @@ func _draw_top(ci: CanvasItem) -> void:
 			ci.draw_string(ThemeDB.fallback_font, Vector2(-80, sy - 10), admiral["name"], HORIZONTAL_ALIGNMENT_CENTER, 160, 13, Color(1, 0.92, 0.7))
 	if hp < max_hp * 0.5:
 		# Brand och rök på däck när skeppet är svårt skadat
-		var deck := Vector2(0, -L * 0.1) if _three_d() else Vector2.ZERO
-		var fp := -fwd * L * 0.15 + deck
-		for i in 3:
-			var k := fmod(_t * 0.8 + i / 3.0, 1.0)
-			ci.draw_circle(fp + Vector2(sin(i * 2.1) * 6.0 + k * 10.0, -k * 34.0), 4.0 + k * 9.0, Color(0.3, 0.3, 0.3, 0.45 * (1.0 - k)))
-		ci.draw_circle(fp, 4.0 + sin(_t * 11.0) * 1.5, Color(1, 0.55, 0.15, 0.85))
-
-
-func _draw_wake(fwd: Vector2, right: Vector2, L: float, alpha: float) -> void:
-	if _wake.size() > 1:
-		for i in range(_wake.size() - 1):
-			var a: Vector2 = _wake[i] - position
-			var b: Vector2 = _wake[i + 1] - position
-			var k := 1.0 - float(i) / _wake.size()
-			var spread := (1.0 - k) * 10.0 * size_f + 4.0
-			draw_line(a + right * spread, b + right * (spread + 2.0), Color(1, 1, 1, 0.32 * k * alpha), 2.5 * k + 1.0)
-			draw_line(a - right * spread, b - right * (spread + 2.0), Color(1, 1, 1, 0.32 * k * alpha), 2.5 * k + 1.0)
-			draw_line(a, b, Color(0.85, 0.97, 1.0, 0.18 * k * alpha), 6.0 * k * size_f)
-	if speed > 25.0:
-		var bow := fwd * L * 0.5
-		var s := clampf(speed / 140.0, 0.2, 1.0)
-		draw_arc(bow - fwd * 4.0, 7.0 * size_f, heading - 1.3, heading + 1.3, 10, Color(1, 1, 1, 0.45 * s * alpha), 2.0)
+		pass  # elden ritas på däck av ShipArt, röken kommer från fx
 
 
 func _draw_kraken() -> void:
