@@ -36,3 +36,18 @@ Genrer jag föreslog först: rymdskjutspel, roguelike-arena, plattformsspel, tor
 fysikpussel, kortspel-roguelike, byggspel/idle, fiskespel, lokal 2-spelare.
 
 Byggspel/idle-idéer: Pixelbyn, Kugghjulsfabriken, **Ö-kolonin (vald)**, Bergets dvärgar, Kosmisk gård.
+
+## Beslut i molnsessionen
+| Område | Beslut |
+|---|---|
+| Nationer | Valdoriska Kronan (kolonialmakt), Brödraskapet av Svarta Revet (pirater), Kalumafolket (ursprungsfolk), Republiken Solmar (handelsrepublik) |
+| Vind | Påverkar farten: medvind full fart, motvind ungefär halverad |
+| Erövring | Skjut sönder kanonbatterierna, sedan landstiger soldaterna |
+| Diplomati | Krig, fred, handelsavtal, allians, bryt avtal, gåvor, lyxgåvor, tribut, gemensamma krig. AI föreslår också |
+| Kriser | Spökflottan och De Sovande Väktarna (från start) i piloten. Den Gyllene Armadan och Djupets Kult (Krakenen) i betan |
+| Resurser | Guld, trä, mat, sten, sand, kristaller, socker, rom, kryddor, pärlor (+ forskning) |
+| Tid | Realtid dag för dag med kalender från 1 mars 1680, paus och 1x/2x/4x/8x |
+| Längd | Pilot nu. Betan: upp till ~8 timmar per genomspelning |
+| Formationer | Linje, kil, spridd. Flottan seglar i det långsammaste skeppets fart |
+| Grafik | Målad stil (AI-genererad i Runway): skepp ovanifrån, byggnader snett uppifrån, palmer, gräs- och sandtexturer, menybild, ledarporträtt |
+| Ljud | Väntar. Epidemic Sound kräver betald prenumeration för nedladdning |

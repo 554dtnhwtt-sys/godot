@@ -10,6 +10,10 @@ const OverlayScript = preload("res://scripts/world/overlay.gd")
 const AIScript = preload("res://scripts/world/ai.gd")
 const EventsScript = preload("res://scripts/world/events.gd")
 const HudScript = preload("res://scripts/ui/hud.gd")
+const AmbientScript = preload("res://scripts/world/ambient.gd")
+
+## Flottans formation när skepp får en förflyttningsorder: linje, kil, spridd.
+const FORMATIONS := {"linje": "Linje", "kil": "Kil", "spridd": "Spridd"}
 
 signal selection_changed
 signal ended(winner: String)
@@ -34,6 +38,7 @@ var _last_day := -1
 var _vision_t := 0.0
 var _wind_target := 0.0
 var _player_dead_announced := false
+var formation := "linje"
 
 
 func _ready() -> void:
@@ -60,6 +65,9 @@ func _ready() -> void:
 	fx.world = self
 	fx.z_index = 5
 	add_child(fx)
+	var amb := AmbientScript.new()
+	amb.world = self
+	add_child(amb)
 	fog = FogScript.new()
 	add_child(fog)
 	fog.setup()
@@ -683,21 +691,45 @@ func _right_click(wp: Vector2) -> void:
 			Game.say("Ni är inte i krig med %s." % Data.nation_short(isl.owner_id), Color(1, 0.8, 0.5))
 		return
 	# Vatten: förflyttning i formation
-	var center := Vector2.ZERO
-	for s in selected_ships:
-		center += s.position
-	center /= selected_ships.size()
-	var n := selected_ships.size()
-	var i := 0
-	for s in selected_ships:
-		var off := Vector2.ZERO
-		if n > 1:
-			var row := i / 4
-			var col := i % 4
-			off = Vector2((col - minf(3, n - 1) * 0.5) * 70.0, row * 70.0)
-		s.order_move(wp + off)
-		i += 1
+	order_formation_move(selected_ships, wp)
 	_marker(wp, Color(0.6, 1, 0.6))
+
+
+## Flyttar en grupp skepp i vald formation. Flottan håller ihop genom att alla
+## seglar i det långsammaste skeppets fart.
+func order_formation_move(group: Array, wp: Vector2) -> void:
+	var n := group.size()
+	if n == 0:
+		return
+	var center := Vector2.ZERO
+	var slowest := INF
+	for s in group:
+		center += s.position
+		slowest = minf(slowest, s.def["speed"])
+	center /= n
+	var dir := (wp - center)
+	dir = dir.normalized() if dir.length() > 1.0 else Vector2.RIGHT
+	var side := dir.orthogonal()
+	# Skeppet närmast målet leder.
+	var ordered := group.duplicate()
+	ordered.sort_custom(func(a, b): return a.position.distance_to(wp) < b.position.distance_to(wp))
+	var cols := int(ceilf(sqrt(float(n))))
+	for i in n:
+		var s = ordered[i]
+		var off := Vector2.ZERO
+		match formation:
+			"linje":
+				off = -dir * i * 100.0
+			"kil":
+				var k := (i + 1) / 2
+				var sgn := 1.0 if i % 2 == 1 else -1.0
+				off = -dir * k * 85.0 + side * sgn * k * 80.0
+			"spridd":
+				var row := i / cols
+				var col := i % cols
+				off = side * (col - (cols - 1) * 0.5) * 150.0 - dir * row * 150.0
+		s.order_move(wp + off)
+		s.speed_cap = clampf(slowest / s.def["speed"], 0.3, 1.0) if n > 1 else 1.0
 
 
 func _order_own_island(isl) -> void:

@@ -3,54 +3,38 @@ extends Node2D
 
 var seed_value := 0
 var dark := false
-var _h := 50.0
-var _lean := 0.0
+var _variant := 1
 var _phase := 0.0
-var _scale := 1.0
+var _scale := 0.4
+var _flip := false
 
 
 func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
-	_scale = rng.randf_range(0.75, 1.2)
-	_h = rng.randf_range(42, 62) * _scale
-	_lean = rng.randf_range(-16, 16)
+	_variant = 1 + rng.randi() % 4
+	_scale = rng.randf_range(0.34, 0.48) * (0.8 if _variant == 4 else 1.0)
 	_phase = rng.randf() * TAU
+	_flip = rng.randf() < 0.5
 
 
 func _process(_delta: float) -> void:
 	var w := Game.wind_strength * (1.0 + Game.storm * 2.5)
-	skew = sin(Time.get_ticks_msec() * 0.0012 * w + _phase) * 0.05 * w + cos(Game.wind_angle) * 0.04 * w
+	skew = sin(Time.get_ticks_msec() * 0.0011 * w + _phase) * 0.045 * w + cos(Game.wind_angle) * 0.035 * w
 
 
 func _draw() -> void:
-	draw_set_transform(Vector2.ZERO)
+	var tex: Texture2D = Art.deco("palm%d" % _variant)
+	if tex == null:
+		return
+	var size := tex.get_size() * _scale
 	# Skugga
-	var sh := PackedVector2Array()
-	for i in 12:
-		var a := TAU * i / 12.0
-		sh.append(Vector2(cos(a) * 22 * _scale + 10, sin(a) * 8 * _scale + 2))
-	draw_colored_polygon(sh, Color(0, 0, 0, 0.18))
-	# Stam
-	var trunk_c := Color(0.55, 0.4, 0.25) if not dark else Color(0.3, 0.25, 0.22)
-	var prev := Vector2.ZERO
-	var segs := 6
-	for i in range(1, segs + 1):
-		var t := float(i) / segs
-		var p := Vector2(_lean * t * t, -_h * t)
-		draw_line(prev, p, trunk_c.darkened(0.1 * (i % 2)), 6.0 * _scale * (1.1 - t * 0.4), true)
-		prev = p
-	var top := prev
-	# Blad
-	var leaf_c := Color(0.2, 0.62, 0.25) if not dark else Color(0.18, 0.32, 0.2)
-	for i in 7:
-		var a := -PI * 0.5 + (i - 3) * 0.55 + (0.2 if i % 2 == 0 else -0.1)
-		var dir := Vector2(cos(a), sin(a) * 0.6 + 0.35)
-		var tip := top + dir * 30.0 * _scale
-		var mid := top + dir * 16.0 * _scale + Vector2(0, -6 * _scale)
-		var lc := leaf_c.lightened(0.08 * (i % 3))
-		draw_line(top, mid, lc, 6.0 * _scale, true)
-		draw_line(mid, tip, lc, 3.5 * _scale, true)
-	# Kokosnötter
-	draw_circle(top + Vector2(-3, 3), 3.0 * _scale, Color(0.45, 0.3, 0.15))
-	draw_circle(top + Vector2(3, 4), 3.0 * _scale, Color(0.4, 0.27, 0.12))
+	draw_set_transform(Vector2(size.x * 0.25, 2), 0.0, Vector2(1, 0.3))
+	draw_circle(Vector2.ZERO, size.x * 0.38, Color(0, 0, 0, 0.16))
+	draw_set_transform(Vector2.ZERO)
+	var col := Color(0.55, 0.6, 0.55) if dark else Color(1, 1, 1)
+	var r := Rect2(Vector2(-size.x * 0.5, -size.y * 0.97), size)
+	if _flip:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(-1, 1))
+	draw_texture_rect(tex, r, false, col)
+	draw_set_transform(Vector2.ZERO)

@@ -52,7 +52,16 @@ func _nation_row(n: String) -> Control:
 	var p := Game.player
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
-	hb.add_child(Emblem.new(n, 56.0))
+	var frame := PanelContainer.new()
+	frame.add_theme_stylebox_override("panel", UITheme.box(Color(0, 0, 0, 0.5), Data.nation_accent(n), 2, 5, 2.0))
+	var portrait := TextureRect.new()
+	portrait.texture = Art.portrait(n)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.custom_minimum_size = Vector2(84, 84)
+	frame.add_child(portrait)
+	hb.add_child(frame)
+	hb.add_child(Emblem.new(n, 46.0))
 	var info := VBoxContainer.new()
 	info.custom_minimum_size.x = 330
 	info.add_child(UITheme.label(Data.NATIONS[n]["name"], 19, Data.nation_color(n).lightened(0.4)))

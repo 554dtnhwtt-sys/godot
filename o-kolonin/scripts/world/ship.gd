@@ -28,6 +28,7 @@ var sinking := 0.0
 var shown := true
 var size_f := 1.0
 var ai_role := ""
+var speed_cap := 1.0  # sätts av formationer så att flottan håller ihop
 var last_hit := -999.0
 var world = null
 var _wake: Array = []
@@ -123,6 +124,8 @@ func max_speed() -> float:
 	s *= 1.0 - Game.storm * 0.3
 	if hp < max_hp * 0.3:
 		s *= 0.75
+	if order == "move":
+		s *= speed_cap
 	return s
 
 
@@ -293,7 +296,7 @@ func _reload_time() -> float:
 
 func _broadside(side: int, tgt, tpos: Vector2, bld) -> void:
 	var n: int = def["cannons"]
-	var length := 46.0 * size_f
+	var length := _hull_len()
 	var dmg: float = def["damage"] * Game.mod(owner_id, "cannon_dmg")
 	if Game.is_playable(owner_id) and Game.res(owner_id, "rom") > 1.0:
 		dmg *= 1.1
@@ -302,8 +305,7 @@ func _broadside(side: int, tgt, tpos: Vector2, bld) -> void:
 	var nrm := Vector2.from_angle(heading + side * PI * 0.5)
 	for i in n:
 		var t := (float(i) / maxf(1, n - 1)) - 0.5 if n > 1 else 0.0
-		var from := position + fwd * t * length * 0.7 + nrm * 8.0 * size_f
-		from.y = position.y + (from.y - position.y) * Y_SQUASH - 8.0
+		var from := position + fwd * t * length * 0.6 + nrm * 9.0 * size_f
 		var target = tgt if tgt != null else tpos
 		world.fx.fire_cannonball(from, target, dmg, owner_id, bld, i * 0.07)
 		world.fx.smoke(from + nrm * 10.0, 1)
@@ -372,7 +374,7 @@ func _move(delta: float, goal: Dictionary) -> void:
 		if other == self or other.owner_id != owner_id or not other.is_alive():
 			continue
 		var d: Vector2 = position - other.position
-		var min_d: float = 34.0 * (size_f + other.size_f) * 0.5
+		var min_d: float = 58.0 * (size_f + other.size_f) * 0.5
 		if d.length() < min_d and d.length() > 0.01:
 			position += d.normalized() * (min_d - d.length()) * 2.0 * delta
 	position.x = clampf(position.x, 40.0, Data.WORLD_SIZE.x - 40.0)
@@ -407,147 +409,137 @@ func take_damage(amount: float, attacker: String) -> void:
 
 
 # ------------------------------------------------------------------ Rita
-func _sq(v: Vector2) -> Vector2:
-	return Vector2(v.x, v.y * Y_SQUASH)
+const SHIP_SHADER = preload("res://shaders/ship.gdshader")
+
+
+func _hull_len() -> float:
+	return 86.0 * size_f
+
+
+func _ensure_material() -> void:
+	if material != null:
+		return
+	var m := ShaderMaterial.new()
+	m.shader = SHIP_SHADER
+	var sail := Color(1, 1, 1)
+	var strength := 0.0
+	match owner_id:
+		"svartarevet", "vildpirater":
+			sail = Color(0.24, 0.22, 0.22)
+			strength = 1.0
+		"djupkulten":
+			sail = Color(0.35, 0.18, 0.42)
+			strength = 1.0
+		"valdoria":
+			sail = Color(0.92, 0.94, 1.0)
+			strength = 0.5
+		"solmar":
+			sail = Color(1.0, 0.9, 0.75)
+			strength = 0.6
+		"kaluma":
+			sail = Color(0.95, 0.88, 0.72)
+			strength = 0.5
+	m.set_shader_parameter("sail_color", sail)
+	m.set_shader_parameter("tint_strength", strength)
+	material = m
 
 
 func _draw() -> void:
 	if is_monster():
 		_draw_kraken()
 		return
+	_ensure_material()
 	var sink_k: float = clampf(sinking / 4.0, 0.0, 1.0)
-	var L := 46.0 * size_f
-	var W := 15.0 * size_f
+	var L := _hull_len()
 	var fwd := Vector2.from_angle(heading)
 	var right := fwd.orthogonal()
 	var ghost: bool = def.get("ghost", false)
 	var crystal: bool = def.get("crystal", false)
-	# Kölvatten
+	var alpha := 1.0 - sink_k * 0.85
+	if ghost:
+		alpha *= 0.72 + 0.18 * sin(_t * 2.0)
+	_draw_wake(fwd, right, L, alpha)
+	var tex: Texture2D = Art.ship(type)
+	if tex == null:
+		return
+	var sc := L / tex.get_width()
+	var half := tex.get_size() * 0.5
+	var bob := sin(_t * 1.7 + position.x * 0.013)
+	var roll := sin(_t * 1.25 + position.y * 0.011) * 0.025 + sink_k * 0.4
+	var lean := clampf(angle_difference(heading, Game.wind_angle), -1.0, 1.0) * 0.04
+	# Glöd för spök- och kristallskepp
+	if ghost or crystal:
+		var gc := Color(0.45, 1.0, 0.75, 0.16 * alpha) if ghost else Color(0.5, 0.9, 1.0, 0.16 * alpha)
+		draw_set_transform(Vector2.ZERO, heading, Vector2(1, 0.55))
+		draw_circle(Vector2.ZERO, L * 0.62 + sin(_t * 3.0) * 3.0, gc)
+	# Skugga på vattnet
+	draw_set_transform(Vector2(6, 8), heading + roll, Vector2(sc, sc * 0.9))
+	draw_texture(tex, -half, Color(0.0, 0.06, 0.12, 0.3 * alpha))
+	# Skrov och segel – gungar med vågorna och lutar i vinden
+	draw_set_transform(Vector2(0, bob * 1.3), heading + roll + lean, Vector2(sc * (1.0 + bob * 0.012), sc * (1.0 - sink_k * 0.45)))
+	draw_texture(tex, -half, Color(1, 1, 1, alpha))
+	# Mynningsflammor
+	if _flash_l > 0.0 or _flash_r > 0.0:
+		var side := -1.0 if _flash_l > 0.0 else 1.0
+		var k := (_flash_l if _flash_l > 0.0 else _flash_r) / 0.15
+		for i in 4:
+			var t := (i - 1.5) / 4.0
+			var fp := Vector2(t * tex.get_width() * 0.6, side * tex.get_height() * 0.42)
+			draw_circle(fp, 22.0 * k, Color(1, 0.8, 0.3, 0.85 * k))
+	draw_set_transform(Vector2.ZERO)
+	# Flagga i toppen av stormasten
+	if sinking <= 0.0:
+		var top := fwd * L * 0.04 + Vector2(0, bob * 1.3 - 2.0)
+		var wdir := Vector2.from_angle(Game.wind_angle)
+		var wn := wdir.orthogonal()
+		var wave := sin(_t * 7.0) * 2.0
+		var fl := 14.0 * clampf(size_f, 1.0, 1.6)
+		var nat := Data.nation_color(owner_id)
+		var acc := Data.nation_accent(owner_id)
+		draw_colored_polygon(PackedVector2Array([top, top + wdir * fl + wn * wave, top + wdir * fl + wn * (6.0 + wave), top + wn * 6.0]), Color(nat, alpha))
+		draw_line(top + wn * 3.0, top + wdir * fl + wn * (3.0 + wave), Color(acc, alpha), 1.5)
+	# Markering
+	if selected:
+		var ring := PackedVector2Array()
+		for i in 33:
+			var a := TAU * i / 32.0
+			ring.append(fwd * cos(a) * L * 0.6 + right * sin(a) * L * 0.26)
+		draw_polyline(ring, Color(0.6, 1.0, 0.6, 0.55 + 0.25 * sin(_t * 4.0)), 2.0, true)
+	if sinking <= 0.0 and (selected or hp < max_hp - 0.5):
+		var bw := 40.0 * clampf(size_f, 1.0, 1.6)
+		var by := -L * 0.38 - 16.0
+		draw_rect(Rect2(-bw * 0.5 - 1, by - 1, bw + 2, 7), Color(0, 0, 0, 0.6))
+		var hc := Color(0.4, 0.9, 0.4) if hp > max_hp * 0.5 else (Color(0.95, 0.8, 0.3) if hp > max_hp * 0.25 else Color(0.95, 0.3, 0.25))
+		draw_rect(Rect2(-bw * 0.5, by, bw * hp / max_hp, 5), hc)
+		if selected and max_troops > 0.0:
+			draw_rect(Rect2(-bw * 0.5, by + 6, bw * troops / max_troops, 3), Color(0.85, 0.85, 1.0))
+	if hp < max_hp * 0.5 and sinking <= 0.0:
+		# Brand och rök när skeppet är svårt skadat
+		for i in 3:
+			var k := fmod(_t * 0.8 + i / 3.0, 1.0)
+			draw_circle(-fwd * L * 0.15 + Vector2(sin(i * 2.1) * 6.0 + k * 10.0, -k * 34.0), 4.0 + k * 9.0, Color(0.3, 0.3, 0.3, 0.45 * (1.0 - k)))
+		draw_circle(-fwd * L * 0.15, 4.0 + sin(_t * 11.0) * 1.5, Color(1, 0.55, 0.15, 0.85))
+	if sinking > 0.0:
+		for i in 5:
+			var k := fmod(_t * 1.5 + i * 0.2, 1.0)
+			draw_circle(Vector2(sin(i * 2.3) * 16.0, -k * 18.0 + 8.0), 2.5 + k * 3.0, Color(1, 1, 1, 0.55 * (1.0 - k)))
+		draw_arc(Vector2.ZERO, L * 0.3 + sink_k * L * 0.4, 0, TAU, 28, Color(1, 1, 1, 0.5 * (1.0 - sink_k)), 2.0)
+
+
+func _draw_wake(fwd: Vector2, right: Vector2, L: float, alpha: float) -> void:
 	if _wake.size() > 1:
 		for i in range(_wake.size() - 1):
 			var a: Vector2 = _wake[i] - position
 			var b: Vector2 = _wake[i + 1] - position
 			var k := 1.0 - float(i) / _wake.size()
-			draw_line(a + right * 6.0 * (1.0 - k) * size_f, b + right * 7.0 * (1.0 - k) * size_f, Color(1, 1, 1, 0.35 * k), 2.0)
-			draw_line(a - right * 6.0 * (1.0 - k) * size_f, b - right * 7.0 * (1.0 - k) * size_f, Color(1, 1, 1, 0.35 * k), 2.0)
-	var sink_off := Vector2(0, sink_k * 18.0)
-	var shape := [Vector2(0.5, 0), Vector2(0.28, 0.5), Vector2(-0.42, 0.46), Vector2(-0.5, 0.32), Vector2(-0.5, -0.32), Vector2(-0.42, -0.46), Vector2(0.28, -0.5)]
-	var hull := PackedVector2Array()
-	var hull_side := PackedVector2Array()
-	for p in shape:
-		var w: Vector2 = fwd * p.x * L + right * p.y * W
-		hull.append(_sq(w) + sink_off)
-		hull_side.append(_sq(w) + Vector2(0, 7.0 * size_f) + sink_off)
-	var alpha := 1.0 - sink_k * 0.8
-	if ghost:
-		alpha *= 0.65 + 0.15 * sin(_t * 2.0)
-	# Skugga på vattnet
-	var shadow := PackedVector2Array()
-	for i in 14:
-		var a := TAU * i / 14.0
-		shadow.append(_sq(fwd * cos(a) * L * 0.55 + right * sin(a) * W * 0.8) + Vector2(10, 10))
-	draw_colored_polygon(shadow, Color(0, 0.1, 0.2, 0.2 * alpha))
-	var hull_c := Color(0.42, 0.28, 0.16)
-	var deck_c := Color(0.72, 0.55, 0.35)
-	if owner_id == "svartarevet" or owner_id == "vildpirater":
-		hull_c = Color(0.18, 0.15, 0.14)
-		deck_c = Color(0.4, 0.32, 0.25)
-	elif ghost:
-		hull_c = Color(0.2, 0.45, 0.38)
-		deck_c = Color(0.35, 0.65, 0.55)
-	elif crystal:
-		hull_c = Color(0.3, 0.5, 0.7)
-		deck_c = Color(0.75, 0.9, 1.0)
-	elif owner_id == "armadan":
-		hull_c = Color(0.45, 0.32, 0.12)
-		deck_c = Color(0.85, 0.68, 0.3)
-	draw_colored_polygon(hull_side, Color(hull_c.darkened(0.25), alpha))
-	draw_colored_polygon(hull, Color(deck_c, alpha))
-	var rail := hull.duplicate()
-	rail.append(hull[0])
-	var nat := Data.nation_color(owner_id)
-	draw_polyline(rail, Color(nat, alpha), 2.5 * size_f, true)
-	# Kanonluckor (mynningsflammor)
-	if _flash_l > 0.0 or _flash_r > 0.0:
-		var side := -1.0 if _flash_l > 0.0 else 1.0
-		for i in 3:
-			var t := (i - 1) * 0.3
-			var fp := _sq(fwd * t * L + right * side * W * 0.65) + sink_off
-			draw_circle(fp, 5.0, Color(1, 0.85, 0.3, 0.9))
-	# Master och segel
-	var masts: int = def["masts"]
-	var offsets := [0.05]
-	if masts == 2:
-		offsets = [0.22, -0.18]
-	elif masts == 3:
-		offsets = [0.3, 0.02, -0.26]
-	var mast_h := 40.0 * size_f
-	var sail_c := Color(0.97, 0.95, 0.88)
-	if owner_id == "svartarevet" or owner_id == "vildpirater":
-		sail_c = Color(0.22, 0.2, 0.2)
-	elif ghost:
-		sail_c = Color(0.6, 1.0, 0.85)
-	elif crystal:
-		sail_c = Color(0.7, 0.95, 1.0)
-	elif owner_id == "armadan":
-		sail_c = Color(0.95, 0.85, 0.5)
-	var wind_push := _sq(Vector2.from_angle(Game.wind_angle)) * (3.0 + Game.wind_strength * 2.0) * size_f
-	var perp := _sq(right)
-	for mi in masts:
-		var base := _sq(fwd * offsets[mi] * L) + sink_off
-		var h := mast_h * (1.0 if mi != masts - 1 or masts == 1 else 0.85)
-		draw_line(base, base + Vector2(0, -h), Color(0.3, 0.2, 0.12, alpha), 2.5)
-		for si in 2:
-			var hw := W * (1.05 if si == 0 else 0.8)
-			var y_bot := h * (0.18 if si == 0 else 0.58)
-			var y_top := h * (0.55 if si == 0 else 0.9)
-			var sx := perp.x * hw
-			if absf(sx) < hw * 0.45:
-				sx = (1.0 if sx >= 0.0 else -1.0) * hw * 0.45
-			var sy := perp.y * hw * 0.5
-			var off := Vector2(sx, sy)
-			var tl := base + Vector2(0, -y_top) + off
-			var tr := base + Vector2(0, -y_top) - off
-			var br := base + Vector2(0, -y_bot) - off
-			var bl := base + Vector2(0, -y_bot) + off
-			var mid_b := (br + bl) * 0.5 + wind_push
-			var mid_t := (tl + tr) * 0.5 + wind_push * 0.5
-			var sc := sail_c.darkened(0.08 * si)
-			if hp < max_hp * 0.4 and si == 1:
-				sc = sc.darkened(0.25)
-			var sfill := Color(sc, alpha * (0.95 if not ghost else 0.6))
-			var cols := PackedColorArray([sfill, sfill, sfill, sfill])
-			# Två fyrhörningar istället för en polygon – klarar även segel som ses från sidan.
-			draw_primitive(PackedVector2Array([tl, mid_t, mid_b, bl]), cols, PackedVector2Array())
-			draw_primitive(PackedVector2Array([mid_t, tr, br, mid_b]), cols, PackedVector2Array())
-			draw_polyline(PackedVector2Array([tl, mid_t, tr]), Color(0.3, 0.2, 0.12, alpha * 0.8), 1.5)
-		if mi == 0:
-			var top := base + Vector2(0, -h - 2)
-			var wv := sin(_t * 6.0) * 2.0
-			var fdir := _sq(Vector2.from_angle(Game.wind_angle)) * 16.0
-			draw_colored_polygon(PackedVector2Array([top, top + fdir + Vector2(0, wv), top + fdir + Vector2(0, 7 + wv), top + Vector2(0, 7)]), Color(nat, alpha))
-	if crystal or ghost:
-		var gc := Color(0.5, 1.0, 0.8, 0.15) if ghost else Color(0.5, 0.9, 1.0, 0.15)
-		draw_circle(Vector2(0, -mast_h * 0.4), L * 0.7, gc)
-	# Markering och statusrad
-	if selected:
-		var ring := PackedVector2Array()
-		for i in 25:
-			var a := TAU * i / 24.0
-			ring.append(Vector2(cos(a) * L * 0.65, sin(a) * L * 0.65 * Y_SQUASH * 0.7) + Vector2(0, 4))
-		draw_polyline(ring, Color(0.6, 1.0, 0.6, 0.9), 2.0, true)
-	if sinking <= 0.0 and (selected or hp < max_hp - 0.5):
-		var bw := 40.0 * size_f
-		var by := -mast_h - 14.0
-		draw_rect(Rect2(-bw * 0.5, by, bw, 5), Color(0, 0, 0, 0.6))
-		var hc := Color(0.4, 0.9, 0.4) if hp > max_hp * 0.5 else (Color(0.95, 0.8, 0.3) if hp > max_hp * 0.25 else Color(0.95, 0.3, 0.25))
-		draw_rect(Rect2(-bw * 0.5, by, bw * hp / max_hp, 5), hc)
-		if selected and max_troops > 0.0:
-			draw_rect(Rect2(-bw * 0.5, by + 6, bw * troops / max_troops, 3), Color(0.85, 0.85, 1.0))
-	if sinking > 0.0:
-		for i in 4:
-			var k := fmod(_t * 1.5 + i * 0.25, 1.0)
-			draw_circle(Vector2(sin(i * 2.3) * 14.0, -k * 20.0 + 10.0), 3.0 + k * 2.0, Color(1, 1, 1, 0.5 * (1.0 - k)))
+			var spread := (1.0 - k) * 10.0 * size_f + 4.0
+			draw_line(a + right * spread, b + right * (spread + 2.0), Color(1, 1, 1, 0.32 * k * alpha), 2.5 * k + 1.0)
+			draw_line(a - right * spread, b - right * (spread + 2.0), Color(1, 1, 1, 0.32 * k * alpha), 2.5 * k + 1.0)
+			draw_line(a, b, Color(0.85, 0.97, 1.0, 0.18 * k * alpha), 6.0 * k * size_f)
+	if speed > 25.0:
+		var bow := fwd * L * 0.5
+		var s := clampf(speed / 140.0, 0.2, 1.0)
+		draw_arc(bow - fwd * 4.0, 7.0 * size_f, heading - 1.3, heading + 1.3, 10, Color(1, 1, 1, 0.45 * s * alpha), 2.0)
 
 
 func _draw_kraken() -> void:

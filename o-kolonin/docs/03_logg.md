@@ -45,3 +45,16 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Rättade huvudmenyns placering, havsbakgrunden, dimman vid kartkanten och seglen.
 - Spökflottan gjordes lite svagare och AI:n kan nu ta tillbaka öar från pirater och kriser.
 - Testläge för utveckling finns i `scripts/debug/autotest.gd` (används bara med kommandoradsargument).
+
+## 24 november – pilot 0.2: ny grafik
+- Genererade målad grafik i Runway (ca 42 av 125 krediter): 10 skepp, 19 byggnader, 4 palmer,
+  6 resursdekorationer, byggnadsställning, gräs- och sandtextur, menybild och porträtt av de 4 ledarna.
+- Klippte ut alla sprites automatiskt (magenta bakgrund) och lade dem i `assets/`.
+- Skeppen: målade sprites ovanifrån som gungar på vågorna, lutar i vinden, har skugga, kölvatten,
+  bogvåg, flagga i nationens färg, mynningsflammor, rök och eld när de är skadade, och sjunker med bubblor.
+  Pirater har svarta segel.
+- Öarna: texturerat gräs och sand, våt strand, rullande skum, målade palmer och resurser.
+- Nytt hav med solkatter och glitter, drivande molnskuggor och måsar.
+- Ny huvudmeny med målad bild som sakta zoomar. Porträtt i nationsval, diplomati och sändebud.
+- Formationer för flottor: linje, kil och spridd.
+- Testat: inga fel i 1200 speldagar.

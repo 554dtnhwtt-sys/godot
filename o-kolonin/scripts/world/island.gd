@@ -5,7 +5,7 @@ extends Node2D
 const BuildingScript = preload("res://scripts/world/building.gd")
 const PalmScript = preload("res://scripts/world/palm.gd")
 const Y_SQUASH := 0.72
-const SLOT_SPACING := 62.0
+const SLOT_SPACING := 72.0
 
 var id := ""
 var display_name := ""
@@ -24,6 +24,10 @@ var selected := false
 var world = null
 var objects_layer: Node2D = null
 
+var poly_side := PackedVector2Array()
+var grass_side := PackedVector2Array()
+var wet := PackedVector2Array()
+var foam_rings: Array = []  # förberäknade skumlinjer för vågornas animation
 var poly := PackedVector2Array()
 var block_poly := PackedVector2Array()
 var grass := PackedVector2Array()
@@ -58,6 +62,8 @@ func setup(def: Dictionary, p_world, p_objects: Node2D) -> void:
 	_build_slots()
 	_build_decor()
 	z_index = -10
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
 func _largest(polys: Array) -> PackedVector2Array:
@@ -92,6 +98,16 @@ func _build_shape() -> void:
 	foam = _largest(Geometry2D.offset_polygon(poly, 12.0))
 	foam.append(foam[0])
 	block_poly = _largest(Geometry2D.offset_polygon(poly, 34.0))
+	wet = _largest(Geometry2D.offset_polygon(poly, 6.0))
+	for k in 12:
+		var ring := _largest(Geometry2D.offset_polygon(poly, 26.0 - k * 1.5))
+		if ring.size() > 2:
+			ring.append(ring[0])
+		foam_rings.append(ring)
+	for p in poly:
+		poly_side.append(p + Vector2(0, 18))
+	for p in grass:
+		grass_side.append(p + Vector2(0, 6))
 
 
 func _build_slots() -> void:
@@ -134,17 +150,17 @@ func _build_decor() -> void:
 			if ok:
 				decos.append({"type": d, "p": p, "s": _rng.randf_range(0.8, 1.25)})
 	# Palmer – inte på byggplatserna
-	var tries := int(radius * 0.35)
+	var tries := int(radius * 0.2)
 	for i in tries:
 		var p := _random_point_in(grass)
 		if _rng.randf() < 0.35:
 			p = _random_beach_point()
 		var near := false
 		for s in slots:
-			if s.distance_to(p) < 28:
+			if s.distance_to(p) < 40:
 				near = true
 				break
-		if near and _rng.randf() < 0.75:
+		if near and _rng.randf() < 0.9:
 			continue
 		var palm := PalmScript.new()
 		palm.position = position + p
@@ -271,7 +287,7 @@ func add_building(type: String, instant: bool = false):
 	objects_layer.add_child(b)
 	# Rensa palmer som står i vägen
 	for palm in palms.duplicate():
-		if is_instance_valid(palm) and palm.position.distance_to(b.position) < 34.0:
+		if is_instance_valid(palm) and palm.position.distance_to(b.position) < 58.0:
 			palms.erase(palm)
 			palm.queue_free()
 	return b
@@ -303,32 +319,44 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func _uvs(pts: PackedVector2Array, scale_f: float = 1.0 / 260.0) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in pts:
+		out.append((p + Vector2(radius, radius)) * scale_f)
+	return out
+
+
+func _tex_poly(pts: PackedVector2Array, tex: Texture2D, col: Color) -> void:
+	if tex == null:
+		draw_colored_polygon(pts, col)
+		return
+	draw_polygon(pts, PackedColorArray([col]), _uvs(pts), tex)
+
+
 func _draw() -> void:
-	var shallow_c := Color(0.42, 0.92, 0.88, 0.22)
-	if dark:
-		shallow_c = Color(0.25, 0.55, 0.6, 0.22)
-	draw_colored_polygon(shallow2, Color(shallow_c, 0.16))
-	draw_colored_polygon(shallow1, Color(shallow_c.lightened(0.15), 0.3))
-	# Skummet längs stranden pulserar med vågorna
-	var fa := 0.35 + 0.2 * sin(_t * 1.7 + radius)
-	draw_polyline(foam, Color(1, 1, 1, fa), 3.0, true)
-	# Sidan (höjd) och stranden
-	var side := PackedVector2Array()
-	for p in poly:
-		side.append(p + Vector2(0, 16))
-	var sand_c := Color(0.97, 0.9, 0.7) if not dark else Color(0.36, 0.33, 0.33)
-	var side_c := Color(0.78, 0.64, 0.42) if not dark else Color(0.2, 0.18, 0.19)
-	draw_colored_polygon(side, side_c)
-	draw_colored_polygon(poly, sand_c)
-	# Gräs
-	var gside := PackedVector2Array()
-	for p in grass:
-		gside.append(p + Vector2(0, 6))
-	var grass_c := Color(0.36, 0.67, 0.3) if not dark else Color(0.25, 0.35, 0.22)
-	draw_colored_polygon(gside, grass_c.darkened(0.3))
-	draw_colored_polygon(grass, grass_c)
+	var shallow_c := Color(0.45, 0.93, 0.88) if not dark else Color(0.3, 0.6, 0.62)
+	draw_colored_polygon(shallow2, Color(shallow_c, 0.14))
+	draw_colored_polygon(shallow1, Color(shallow_c.lightened(0.2), 0.28))
+	draw_colored_polygon(wet, Color(0.85, 0.8, 0.62, 0.55) if not dark else Color(0.3, 0.3, 0.3, 0.5))
+	# Skum som rullar in mot stranden
+	for k in 2:
+		var ph := fmod(_t * 0.25 + k * 0.5 + radius * 0.001, 1.0)
+		var ring: PackedVector2Array = foam_rings[mini(int(ph * foam_rings.size()), foam_rings.size() - 1)]
+		if ring.size() > 2:
+			draw_polyline(ring, Color(1, 1, 1, 0.42 * sin(ph * PI)), 2.5, true)
+	var sand: Texture2D = Art.texture("sand")
+	var grass_t: Texture2D = Art.texture("grass")
+	var tint := Color(1, 1, 1) if not dark else Color(0.42, 0.4, 0.42)
+	_tex_poly(poly_side, sand, Color(tint.r * 0.72, tint.g * 0.62, tint.b * 0.5))
+	_tex_poly(poly, sand, tint)
+	var gtint := Color(1, 1, 1) if not dark else Color(0.5, 0.58, 0.5)
+	_tex_poly(grass_side, grass_t, Color(gtint.r * 0.55, gtint.g * 0.6, gtint.b * 0.5))
+	_tex_poly(grass, grass_t, gtint)
+	var edge := grass.duplicate()
+	edge.append(grass[0])
+	draw_polyline(edge, Color(0.75, 0.72, 0.45, 0.35) if not dark else Color(0.3, 0.3, 0.3, 0.3), 5.0, true)
 	for pt in patches:
-		var c: Color = grass_c.lightened(pt["c"]) if pt["c"] > 0 else grass_c.darkened(-pt["c"])
+		var c := Color(1, 1, 0.8, 0.07) if pt["c"] > 0 else Color(0, 0.15, 0, 0.08)
 		_draw_ellipse(pt["p"], pt["r"], pt["r"] * 0.6, c)
 	if volcano:
 		_draw_volcano()
@@ -337,13 +365,13 @@ func _draw() -> void:
 	# Ägarens gräns
 	if owner_id != "neutral":
 		var col := Data.nation_color(owner_id)
-		col.a = 0.9
+		col.a = 0.85
 		var acc := Data.nation_accent(owner_id)
 		for i in poly.size():
 			if i % 2 == 0:
 				var j := (i + 1) % poly.size()
 				draw_line(poly[i] + Vector2(0, -2), poly[j] + Vector2(0, -2), col, 5.0, true)
-				draw_line(poly[i] + Vector2(0, -2), poly[j] + Vector2(0, -2), Color(acc, 0.5), 1.5, true)
+				draw_line(poly[i] + Vector2(0, -2), poly[j] + Vector2(0, -2), Color(acc, 0.5), 1.5)
 	if selected:
 		var sel := poly.duplicate()
 		sel.append(poly[0])
@@ -403,38 +431,16 @@ func _draw_volcano() -> void:
 func _draw_deposit(d: Dictionary) -> void:
 	var p: Vector2 = d["p"]
 	var s: float = d["s"]
-	match d["type"]:
-		"sten":
-			_draw_ellipse(p + Vector2(0, 6) * s, 18 * s, 7 * s, Color(0, 0, 0, 0.2))
-			draw_colored_polygon(PackedVector2Array([p + Vector2(-16, 4) * s, p + Vector2(-10, -10) * s, p + Vector2(2, -14) * s, p + Vector2(14, -4) * s, p + Vector2(12, 6) * s]), Color(0.6, 0.6, 0.63))
-			draw_colored_polygon(PackedVector2Array([p + Vector2(-10, -10) * s, p + Vector2(2, -14) * s, p + Vector2(4, -4) * s]), Color(0.75, 0.75, 0.78))
-		"sand":
-			_draw_ellipse(p, 22 * s, 9 * s, Color(1.0, 0.95, 0.78))
-			_draw_ellipse(p + Vector2(-4, -3) * s, 12 * s, 5 * s, Color(1, 0.98, 0.88))
-		"kristaller":
-			var glow := 0.5 + 0.3 * sin(_t * 2.0 + p.x)
-			_draw_ellipse(p, 20 * s, 8 * s, Color(0.4, 0.9, 1.0, 0.25 * glow))
-			for k in 3:
-				var o := Vector2(-8 + k * 8, 0) * s
-				var hh := (16.0 + k * 6.0 - absf(k - 1) * 8.0) * s
-				draw_colored_polygon(PackedVector2Array([p + o + Vector2(-4, 2) * s, p + o + Vector2(0, -hh), p + o + Vector2(4, 2) * s]), Color(0.55, 0.92, 1.0).lerp(Color(0.8, 0.6, 1.0), k * 0.4))
-		"guld":
-			_draw_ellipse(p, 16 * s, 7 * s, Color(0.55, 0.45, 0.3))
-			for k in 4:
-				var gp := p + Vector2(-8 + k * 5, -2 + (k % 2) * 3) * s
-				_draw_ellipse(gp, 3.5 * s, 2.5 * s, Color(1, 0.84, 0.3))
-			if fmod(_t + p.x * 0.01, 3.0) < 0.2:
-				draw_line(p + Vector2(-6, -8), p + Vector2(6, -8), Color(1, 1, 0.8), 2.0)
-				draw_line(p + Vector2(0, -14), p + Vector2(0, -2), Color(1, 1, 0.8), 2.0)
-		"socker":
-			for k in 7:
-				var sp := p + Vector2(-12 + k * 4, 0) * s
-				draw_line(sp + Vector2(0, 4), sp + Vector2(sin(_t + k) * 1.5, -18 * s), Color(0.55, 0.75, 0.3), 2.0)
-		"kryddor":
-			for k in 3:
-				var kp := p + Vector2(-10 + k * 10, (k % 2) * 4) * s
-				_draw_ellipse(kp, 8 * s, 6 * s, Color(0.3, 0.55, 0.25))
-				_draw_ellipse(kp + Vector2(2, -2), 2.5 * s, 2.5 * s, Color(0.95, 0.35, 0.2))
-		"parlor":
-			_draw_ellipse(p, 9 * s, 5 * s, Color(0.98, 0.85, 0.82))
-			_draw_ellipse(p + Vector2(0, -2), 3 * s, 3 * s, Color(1, 1, 1))
+	var tex: Texture2D = Art.deco(d["type"])
+	if tex == null:
+		return
+	var w := 46.0 * s
+	if d["type"] == "parlor":
+		w = 34.0 * s
+	var h := w * tex.get_height() / tex.get_width()
+	draw_set_transform(p + Vector2(4, 2), 0.0, Vector2(1, 0.3))
+	draw_circle(Vector2.ZERO, w * 0.42, Color(0, 0, 0, 0.15))
+	draw_set_transform(Vector2.ZERO)
+	if d["type"] == "kristaller":
+		draw_circle(p + Vector2(0, -h * 0.4), w * 0.6, Color(0.5, 0.95, 1.0, 0.1 + 0.06 * sin(_t * 2.0 + p.x)))
+	draw_texture_rect(tex, Rect2(p + Vector2(-w * 0.5, -h * 0.9), Vector2(w, h)), false)

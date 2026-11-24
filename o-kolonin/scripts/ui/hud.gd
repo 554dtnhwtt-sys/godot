@@ -367,12 +367,28 @@ func _build_ship_info() -> void:
 	hb.add_child(UITheme.button("Stoppa", _stop_selected, 14))
 	hb.add_child(UITheme.button("Till hemön", _send_home, 14))
 	info_box.add_child(hb)
+	if sel.size() > 1:
+		var fb := HBoxContainer.new()
+		fb.add_theme_constant_override("separation", 6)
+		fb.add_child(UITheme.label("Formation:", 14, UITheme.DIM))
+		var tips := {"linje": "Linje: skeppen seglar efter varandra – bra för bredsidor.", "kil": "Kil: spjutspets med ledaren längst fram.", "spridd": "Spridd: stort avstånd mellan skeppen – svårare att träffa."}
+		for f in world.FORMATIONS:
+			var b := UITheme.button(world.FORMATIONS[f], _set_formation.bind(f), 14)
+			b.modulate = Color(1.0, 0.85, 0.4) if world.formation == f else Color(1, 1, 1)
+			b.tooltip_text = tips[f]
+			fb.add_child(b)
+		info_box.add_child(fb)
 	var hint := "Högerklick: segla, anfall skepp/ö, kolonisera obebodd ö."
 	for s in sel:
 		if s.def.get("trade", false):
 			hint += "\nHandelsfartyg: lägg dig vid en egen ö och högerklicka på en annan egen ö för att starta en handelsrutt."
 			break
 	info_box.add_child(UITheme.wrap_label(hint, 13, UITheme.DIM))
+
+
+func _set_formation(f: String) -> void:
+	world.formation = f
+	_rebuild_info()
 
 
 func _stop_selected() -> void:
@@ -613,7 +629,22 @@ func _next_popup() -> void:
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 12)
 	panel.add_child(vb)
-	vb.add_child(UITheme.label(data.get("title", ""), 24, UITheme.GOLD))
+	var th := HBoxContainer.new()
+	th.add_theme_constant_override("separation", 14)
+	if data.has("portrait"):
+		var frame := PanelContainer.new()
+		frame.add_theme_stylebox_override("panel", UITheme.box(Color(0, 0, 0, 0.5), Data.nation_accent(data["portrait"]), 2, 5, 2.0))
+		var pt := TextureRect.new()
+		pt.texture = Art.portrait(data["portrait"])
+		pt.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pt.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		pt.custom_minimum_size = Vector2(96, 96)
+		frame.add_child(pt)
+		th.add_child(frame)
+	var tl := UITheme.wrap_label(data.get("title", ""), 24, UITheme.GOLD)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	th.add_child(tl)
+	vb.add_child(th)
 	vb.add_child(HSeparator.new())
 	var txt := UITheme.wrap_label(data.get("text", ""), 16)
 	txt.custom_minimum_size.x = 540
@@ -642,6 +673,7 @@ func _popup_choice(cb: Callable) -> void:
 func _on_ai_popup(data: Dictionary) -> void:
 	var from: String = data["from"]
 	show_popup({
+		"portrait": from,
 		"title": "Sändebud från %s" % Data.nation_name(from),
 		"text": data["text"] + "\n\nRelation just nu: %d" % int(Game.get_rel(Game.player, from)["value"]),
 		"buttons": [

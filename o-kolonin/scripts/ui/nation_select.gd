@@ -19,13 +19,12 @@ var _crisis_checks := {}
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
-	var bg := ColorRect.new()
+	var bg := TextureRect.new()
+	bg.texture = Art.ui("menu_bg.jpg")
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var mat := ShaderMaterial.new()
-	mat.shader = load("res://shaders/ocean.gdshader")
-	mat.set_shader_parameter("size", Vector2(2400, 1400))
-	bg.material = mat
-	bg.modulate = Color(0.45, 0.45, 0.5)
+	bg.modulate = Color(0.32, 0.32, 0.38)
 	add_child(bg)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -173,7 +172,16 @@ func _select(n: String) -> void:
 	var def: Dictionary = Data.NATIONS[n]
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 14)
-	head.add_child(Emblem.new(n, 96.0))
+	var frame := PanelContainer.new()
+	frame.add_theme_stylebox_override("panel", UITheme.box(Color(0, 0, 0, 0.5), Data.nation_accent(n), 3, 6, 3.0))
+	var portrait := TextureRect.new()
+	portrait.texture = Art.portrait(n)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.custom_minimum_size = Vector2(150, 150)
+	frame.add_child(portrait)
+	head.add_child(frame)
+	head.add_child(Emblem.new(n, 70.0))
 	var hv := VBoxContainer.new()
 	hv.add_child(UITheme.label(def["name"], 26, Data.nation_color(n).lightened(0.45)))
 	hv.add_child(UITheme.label(def["type"], 16, UITheme.DIM))

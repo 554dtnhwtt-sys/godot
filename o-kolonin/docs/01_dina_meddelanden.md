@@ -26,3 +26,22 @@
 > (skärmdump på Anslutningar: Asana, Atlassian, Figma, Gmail, Google Calendar, Intercom, Linear, Notion, Slack) behöver du dessa
 >
 > skicka en mapp som innehåller all info jag skickat och allt du gjort.
+
+## 6. Fortsättning i molnsessionen (23–24 november)
+| Fråga | Ditt svar |
+|---|---|
+| Antal nationer | 4 nationer |
+| Vind | Påverkar fart |
+| Erövring | Ja, landstigning |
+| Diplomati | Full diplomati |
+| Endgame disasters | Fler endgame-nationer som kan köras samtidigt, vissa med från start (som i Stellaris), + Spökflottan |
+| Fler resurser | Socker & rom, kryddor, pärlor |
+| Offline-produktion | Nej |
+| AI-tempo | Inställbart i valskärmen |
+| Speltid | En genomspelning i betan ska ta upp till 8 timmar. Inte turordning – dag för dag, och man ska kunna spola tiden |
+| Omfattning nu | "Inte 8 timmar nu. Nu bygger vi bara pilot" |
+| Motor | Fortsätt med Godot |
+| Nästa steg efter pilot 0.1 | Ljud och musik, och "mycket bättre animationer och grafik. Ser ut som Roblox" |
+| Sjöslag | Som nu, men med formationer |
+| Grafik | Målad AI-grafik + animationer |
+| Ljud | Först Epidemic Sound, sedan (eftersom kontot inte får ladda ner): vänta med ljudet |
