@@ -566,8 +566,8 @@ func _draw() -> void:
 		var c := Color(1, 1, 0.8, 0.07) if pt["c"] > 0 else Color(0, 0.15, 0, 0.08)
 		_draw_ellipse(pt["p"], pt["r"], pt["r"] * 0.6, c)
 	_draw_town_ground()
-	if volcano:
-		_draw_volcano()
+	if volcano and (world == null or world.view3d == null):
+		_draw_volcano()  # med 3D-lagret är vulkanen en 3D-modell
 	# Ägarens gräns
 	if owner_id != "neutral":
 		var col := Data.nation_color(owner_id)

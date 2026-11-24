@@ -95,3 +95,11 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Mjuka markytor under städer och resursplatser, hamn med brygga vid kusten, bryggor vid fiskelägen,
   överton mellan stadsnivåer.
 - Testat: inga fel i 1400 speldagar.
+
+## 24 november – pilot 0.8: 3D-skepp och 3D-byggnader
+- Nytt 3D-lager (`scripts/world3d/`): byggverktyg för lågpolygonmodeller, 3D-skepp, 3D-städer,
+  3D-resursplatser, palmer och vulkaner, plus shaders för modeller, segel, flaggor och skuggor.
+- Alla 11 skeppstyper, alla 5 stadsnivåer, Väktarnas tempelstad, alla 10 resursbyggnader och varvet har egna modeller.
+- 2D-bilderna används inte längre för skepp och byggnader (de finns kvar som reserv).
+- Rättade färgerna i 3D (de omvandlades två gånger och blev för mörka) och skärpte skuggorna.
+- Testat: inga fel i 600 speldagar med aggressiv AI och tidiga kriser. Skärmdumpar av alla skeppstyper och stadsnivåer.

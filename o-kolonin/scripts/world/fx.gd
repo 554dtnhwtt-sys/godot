@@ -46,6 +46,11 @@ func dust(p: Vector2) -> void:
 		parts.append({"k": "smoke", "p": p, "v": Vector2(randf_range(-15, 15), randf_range(-20, -8)), "life": 0.0, "max": 1.2, "s": 8.0})
 
 
+## Mynningsflamma från en kanon (ritas ovanför 3D-skeppen).
+func flash(p: Vector2, delay: float = 0.0) -> void:
+	parts.append({"k": "flash", "p": p, "v": Vector2.ZERO, "life": -delay, "max": 0.16, "s": 9.0})
+
+
 func text(p: Vector2, s: String, col: Color) -> void:
 	parts.append({"k": "text", "p": p, "v": Vector2(0, -30), "life": 0.0, "max": 1.8, "s": 0.0, "t": s, "c": col})
 
@@ -64,6 +69,9 @@ func _process(delta: float) -> void:
 	while i < parts.size():
 		var p: Dictionary = parts[i]
 		p["life"] += delta
+		if p["life"] < 0.0:
+			i += 1
+			continue
 		if p["life"] >= p["max"]:
 			parts.remove_at(i)
 			continue
@@ -109,6 +117,8 @@ func _draw() -> void:
 		draw_circle(p, 2.5, Color(0, 0, 0, 0.25))
 		draw_circle(p - Vector2(0, h), 3.2, Color(0.12, 0.12, 0.13))
 	for p in parts:
+		if p["life"] < 0.0:
+			continue
 		var k: float = p["life"] / p["max"]
 		var pos: Vector2 = p["p"]
 		match p["k"]:
@@ -122,6 +132,9 @@ func _draw() -> void:
 				draw_line(pos, pos + p["v"].normalized() * 5.0, Color(0.5, 0.35, 0.2, 1.0 - k), 2.0)
 			"boom":
 				draw_circle(pos, p["s"] * (0.6 + k), Color(1.0, 0.6 - k * 0.4, 0.15, 0.85 * (1.0 - k)))
+			"flash":
+				draw_circle(pos, p["s"] * (1.0 - k * 0.5), Color(1.0, 0.85, 0.4, 0.9 * (1.0 - k)))
+				draw_circle(pos, p["s"] * 0.45 * (1.0 - k), Color(1, 1, 0.9, 1.0 - k))
 			"text":
 				var font := ThemeDB.fallback_font
 				draw_string(font, pos + Vector2(1, 1), p["t"], HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0, 0, 0, 0.7 * (1.0 - k)))

@@ -177,6 +177,8 @@ func _rect(tex: Texture2D) -> Rect2:
 
 ## Hur högt över marken byggnadens topp är (för skylten över staden).
 func top_height() -> float:
+	if _three_d() and type == "radhus":
+		return Game.world.view3d.town_top(island)
 	var tex := _tex()
 	if tex == null:
 		return 80.0
@@ -212,8 +214,39 @@ func _bar(y: float, frac: float, col: Color) -> void:
 	draw_rect(Rect2(-24, y, 48 * frac, 6), col)
 
 
+func _three_d() -> bool:
+	return Game.world != null and Game.world.view3d != null
+
+
+## Med 3D-lagret ritas bara mätare, nivåmarkering och brand här (ovanför modellerna).
+func _draw_3d_marks() -> void:
+	if not built:
+		_bar(16, clampf(progress, 0.0, 1.0), Color(0.95, 0.8, 0.3))
+		return
+	if upgrading and type != "radhus" and _pending_delay <= 0.0:
+		_bar(16, up_progress, Color(0.6, 0.85, 1.0))
+		if randf() < 0.05 and Game.world:
+			Game.world.fx.dust(global_position + Vector2(randf_range(-30, 30), -4))
+	if level >= 2:
+		for i in level:
+			var x := -6.0 * (level - 1) + i * 12.0
+			draw_colored_polygon(PackedVector2Array([Vector2(x, 24), Vector2(x + 4, 28), Vector2(x, 32), Vector2(x - 4, 28)]), Color(1, 0.85, 0.3))
+	if ruined:
+		var h := 40.0 if type == "radhus" else 18.0
+		_smoke(Vector2(0, -h), Color(0.25, 0.25, 0.25))
+		draw_circle(Vector2(-6, -h * 0.6), 6 + sin(_t * 9.0) * 1.5, Color(1, 0.5, 0.1, 0.85))
+		draw_circle(Vector2(8, -h * 0.4), 4 + sin(_t * 7.0) * 1.5, Color(1, 0.7, 0.2, 0.8))
+	if hp < max_hp - 1.0:
+		_bar(18, hp / max_hp, Color(0.9, 0.3, 0.25))
+
+
 func _draw() -> void:
 	if delay > 0.0 or concealed:
+		return
+	if _three_d():
+		if z_index != 6:
+			z_index = 6
+		_draw_3d_marks()
 		return
 	var tex := _tex()
 	if tex == null:

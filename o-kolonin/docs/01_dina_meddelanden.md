@@ -69,3 +69,6 @@
 
 ## 11. Övergångar
 > Ser konstigt ut när modellerna har terräng inklipp i sig. Det ser ut som du bara kastat på moddellerna på kartan. Du måste se till att det är en snygg övergång från staden och omgivningen. Inte som att man klipp och klistrat. Modellerna måste vara mer dynamiska. Och att staden har en kust fucker upp om staden sitter inåt land
+
+## 12. 3D
+> gör 3d för byggnader och för skepp.

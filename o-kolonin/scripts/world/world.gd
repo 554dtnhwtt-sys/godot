@@ -12,6 +12,7 @@ const EventsScript = preload("res://scripts/world/events.gd")
 const HudScript = preload("res://scripts/ui/hud.gd")
 const AmbientScript = preload("res://scripts/world/ambient.gd")
 const GovernorScript = preload("res://scripts/world/governor.gd")
+const View3DScript = preload("res://scripts/world3d/view3d.gd")
 const Governor = GovernorScript
 
 ## Flottans formation när skepp får en förflyttningsorder: linje, kil, spridd.
@@ -30,6 +31,7 @@ var cam: Camera2D = null
 var hud = null
 var events = null
 var overlay = null
+var view3d = null      # 3D-lagret med skepp, städer och byggnader
 var objects: Node2D = null
 var ais := {}
 var markers: Array = []
@@ -88,6 +90,10 @@ func _ready() -> void:
 	cam.make_current()
 	var home = island_by_id(Data.NATIONS[Game.player]["home"])
 	cam.focus(home.position + Vector2(0, 60))
+	var v3 := View3DScript.new()
+	add_child(v3)
+	v3.setup(self)
+	view3d = v3
 	for n in Game.nations:
 		if Game.nations[n]["ai"]:
 			var ai := AIScript.new()

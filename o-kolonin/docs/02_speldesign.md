@@ -96,3 +96,17 @@ Pearl Bay, Ghost Skerry, Shark's Tooth och Sunstone Isle. Havet heter the Emeral
 - Hamnen (hamnmagasin) placeras vid den riktiga kusten med en brygga ut i vattnet, och en väg till staden.
   Fiskelägen och pärldykare får egna bryggor. Båtar guppar vid bryggorna.
 - När staden växer tonas den gamla modellen över i den nya, med byggställning och damm under uppgraderingen.
+
+## 3D-skepp och 3D-byggnader (version 0.8)
+| Område | Hur det fungerar |
+|---|---|
+| Teknik | Havet, öarna och dimman är kvar som målad 2D. Skepp, städer, resursbyggnader, palmer och vulkaner är 3D-modeller som byggs i kod och renderas i ett eget 3D-lager med genomskinlig bakgrund. 3D-kameran tittar snett ned i exakt samma vinkel som 2D-världen (cirka 46°), så modellerna står precis där de ska |
+| Ljus | En sol snett framifrån från vänster med riktiga skuggor. Skuggorna faller på havet och öarna via en osynlig skuggyta |
+| Skepp | Skrov med färgade band i nationsfärgen, däck, reling, kanonportar med kanoner (en rad per kanondäck), akter- och förkastell med fönster, bogspröt, master med mastkorgar och rår. Råsegel eller gaffelsegel efter skeppstyp, klyvare och en flagga som vajar med vinden |
+| Rörelse | Seglen buktar mer ju fortare skeppet går, gaffelsegel byter sida efter vinden, skeppet krängar i vinden och gungar mer i storm. Sjunkande skepp lutar och försvinner ned under vattenytan. Mynningsflammor när bredsidan avfyras |
+| Specialskepp | Spökskepp lyser grönt, kristallskepp lyser blått, pirater har svarta segel, Armadan gyllene och Djupkulten lila |
+| Städer | Husen ligger i kvarter med gator och växer fram ett i taget medan staden uppgraderas. Nivå 1: palissad, tält, eldstad och utkikstorn. Nivå 2: timmerhus med halmtak och kapell. Nivå 3: vita hus med tegeltak, kyrka och brunn. Nivå 4: katedral, högre hus, stadsmur med bastioner. Nivå 5: palats med kupol och pelargång, stjärnfort. Väktarnas ö: trappstegspyramider med glödande kristaller |
+| Anpassning | Hus och murar hamnar aldrig i havet, på vulkanen, på varvet eller på resursplatserna |
+| Resursplatser | Egna 3D-modeller för alla tio (skog med stuga och timmerstaplar, palmodling, fiskeläge på pålar med torkställningar, stenbrott med kran, sandtag med såll, sockerplantage med väderkvarn, kryddgård, pärldykare, kristallgruva, guldgruva med lyftverk) och för varvet (slip med ett skepp under byggnad och kran). Nivå 2 och 3 ger fler hus, träd och förråd |
+| Animationer | Väderkvarnens vingar snurrar, kranar svänger, guldgruvans hjul snurrar, kristaller pulserar, fiskebåtar seglar ut och tillbaka, palmer vajar i vinden, rök från skorstenar och vulkanen. Byggnader reser sig ur marken medan de byggs och studsar när de är klara |
+| Mätare | HP-mätare, trupper, erfarenhet, amiralsstjärna och brand ritas ovanför 3D-lagret |

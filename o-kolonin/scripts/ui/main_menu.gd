@@ -55,7 +55,7 @@ func _ready() -> void:
 		var btn := UITheme.button(b[0], b[1], 22)
 		btn.custom_minimum_size = Vector2(0, 54)
 		vb.add_child(btn)
-	var ver := UITheme.label("Pilot version 0.7", 13, UITheme.DIM)
+	var ver := UITheme.label("Pilot version 0.8", 13, UITheme.DIM)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(ver)
 
