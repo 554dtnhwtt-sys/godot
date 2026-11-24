@@ -38,5 +38,10 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Händelser: storm, pirater, handelsman, rikt fiske, skeppsbrutna.
 - Kriser: Spökflottan (6 vågor) och De Sovande Väktarna (finns från start på Solstensön). Armadan och Djupkulten kommer i betan.
 
-## Status
-- Koden är skriven men ännu INTE provkörd. Första körningen kan ge skriptfel – de rättas i nästa uppdatering.
+## Status (24 november)
+- Byggde en egen Godot-version i molnet och provkörde spelet.
+- Rättade alla skriptfel. Testade 1300 speldagar (3,5 år) med AI på alla nationer, aggressiv AI
+  och tidiga kriser: krig, allianser, erövringar, Spökflottan och Väktarna fungerar utan fel.
+- Rättade huvudmenyns placering, havsbakgrunden, dimman vid kartkanten och seglen.
+- Spökflottan gjordes lite svagare och AI:n kan nu ta tillbaka öar från pirater och kriser.
+- Testläge för utveckling finns i `scripts/debug/autotest.gd` (används bara med kommandoradsargument).

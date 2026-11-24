@@ -13,10 +13,10 @@ var _last_mouse := Vector2.ZERO
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	zoom = Vector2(0.6, 0.6)
-	limit_left = -600
-	limit_top = -600
-	limit_right = int(Data.WORLD_SIZE.x) + 600
-	limit_bottom = int(Data.WORLD_SIZE.y) + 600
+	limit_left = 0
+	limit_top = 0
+	limit_right = int(Data.WORLD_SIZE.x)
+	limit_bottom = int(Data.WORLD_SIZE.y)
 
 
 func _process(delta: float) -> void:

@@ -274,7 +274,7 @@ func _combat(delta: float) -> void:
 		return
 	var a := to.angle()
 	for side in [-1, 1]:
-		var normal := heading + side * PI * 0.5
+		var normal: float = heading + side * PI * 0.5
 		if absf(angle_difference(normal, a)) < 0.45:
 			if side == -1 and reload_l <= 0.0:
 				_broadside(side, tgt, tpos, bld)
@@ -372,7 +372,7 @@ func _move(delta: float, goal: Dictionary) -> void:
 		if other == self or other.owner_id != owner_id or not other.is_alive():
 			continue
 		var d: Vector2 = position - other.position
-		var min_d := 34.0 * (size_f + other.size_f) * 0.5
+		var min_d: float = 34.0 * (size_f + other.size_f) * 0.5
 		if d.length() < min_d and d.length() > 0.01:
 			position += d.normalized() * (min_d - d.length()) * 2.0 * delta
 	position.x = clampf(position.x, 40.0, Data.WORLD_SIZE.x - 40.0)
@@ -435,7 +435,7 @@ func _draw() -> void:
 	var hull := PackedVector2Array()
 	var hull_side := PackedVector2Array()
 	for p in shape:
-		var w := fwd * p.x * L + right * p.y * W
+		var w: Vector2 = fwd * p.x * L + right * p.y * W
 		hull.append(_sq(w) + sink_off)
 		hull_side.append(_sq(w) + Vector2(0, 7.0 * size_f) + sink_off)
 	var alpha := 1.0 - sink_k * 0.8
@@ -512,11 +512,14 @@ func _draw() -> void:
 			var bl := base + Vector2(0, -y_bot) + off
 			var mid_b := (br + bl) * 0.5 + wind_push
 			var mid_t := (tl + tr) * 0.5 + wind_push * 0.5
-			var sail := PackedVector2Array([tl, mid_t, tr, br, mid_b, bl])
 			var sc := sail_c.darkened(0.08 * si)
 			if hp < max_hp * 0.4 and si == 1:
 				sc = sc.darkened(0.25)
-			draw_colored_polygon(sail, Color(sc, alpha * (0.95 if not ghost else 0.6)))
+			var sfill := Color(sc, alpha * (0.95 if not ghost else 0.6))
+			var cols := PackedColorArray([sfill, sfill, sfill, sfill])
+			# Två fyrhörningar istället för en polygon – klarar även segel som ses från sidan.
+			draw_primitive(PackedVector2Array([tl, mid_t, mid_b, bl]), cols, PackedVector2Array())
+			draw_primitive(PackedVector2Array([mid_t, tr, br, mid_b]), cols, PackedVector2Array())
 			draw_polyline(PackedVector2Array([tl, mid_t, tr]), Color(0.3, 0.2, 0.12, alpha * 0.8), 1.5)
 		if mi == 0:
 			var top := base + Vector2(0, -h - 2)

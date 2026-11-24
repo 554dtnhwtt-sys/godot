@@ -38,7 +38,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 10
 	root = Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = UITheme.build()
 	add_child(root)
@@ -49,8 +49,6 @@ func _ready() -> void:
 	minimap = Minimap.new()
 	minimap.world = world
 	root.add_child(minimap)
-	minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	minimap.position = Vector2(-0, 0)
 	research_panel = ResearchPanel.new()
 	research_panel.hud = self
 	root.add_child(research_panel)
@@ -73,7 +71,7 @@ func _ready() -> void:
 # ------------------------------------------------------------------ Övre raden
 func _build_top_bar() -> void:
 	var bar := PanelContainer.new()
-	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	bar.add_theme_stylebox_override("panel", UITheme.box(Color(0.08, 0.06, 0.05, 0.92), UITheme.BORDER, 0, 0, 6.0))
 	root.add_child(bar)
 	var hb := HBoxContainer.new()
@@ -172,8 +170,11 @@ func _fmt(v: float) -> String:
 # ------------------------------------------------------------------ Knappar till höger
 func _build_side_buttons() -> void:
 	var vb := VBoxContainer.new()
-	vb.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	vb.position = Vector2(-190, 56)
+	vb.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	vb.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	vb.offset_left = -190
+	vb.offset_right = -14
+	vb.offset_top = 56
 	vb.custom_minimum_size = Vector2(176, 0)
 	vb.add_theme_constant_override("separation", 6)
 	root.add_child(vb)
@@ -265,9 +266,11 @@ func _fade_log() -> void:
 # ------------------------------------------------------------------ Infopanel
 func _build_info_panel() -> void:
 	info_panel = PanelContainer.new()
-	info_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	info_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	info_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	info_panel.position = Vector2(12, -12)
+	info_panel.offset_left = 12
+	info_panel.offset_top = -12
+	info_panel.offset_bottom = -12
 	info_panel.custom_minimum_size = Vector2(600, 0)
 	root.add_child(info_panel)
 	info_box = VBoxContainer.new()
@@ -566,13 +569,13 @@ func _process(delta: float) -> void:
 # ------------------------------------------------------------------ Popup
 func _build_popup_layer() -> void:
 	popup_layer = Control.new()
-	popup_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	popup_layer.mouse_filter = Control.MOUSE_FILTER_STOP
 	popup_layer.visible = false
 	root.add_child(popup_layer)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.45)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	popup_layer.add_child(dim)
 
 

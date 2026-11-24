@@ -13,9 +13,12 @@ var _war_targets := {}
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_CENTER)
+	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	custom_minimum_size = Vector2(1080, 600)
-	position = Vector2(-540, -300)
+	offset_left = -540
+	offset_right = 540
+	offset_top = -300
+	offset_bottom = 300
 	_content = VBoxContainer.new()
 	_content.add_theme_constant_override("separation", 10)
 	add_child(_content)

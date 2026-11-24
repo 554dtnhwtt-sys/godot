@@ -11,9 +11,12 @@ var _queue_label: Label
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_CENTER)
+	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	custom_minimum_size = Vector2(1120, 640)
-	position = Vector2(-560, -320)
+	offset_left = -560
+	offset_right = 560
+	offset_top = -320
+	offset_bottom = 320
 	_content = VBoxContainer.new()
 	_content.add_theme_constant_override("separation", 10)
 	add_child(_content)
@@ -152,7 +155,7 @@ func update_progress() -> void:
 		var rid: String = st["current_research"]
 		_progress.max_value = Data.research_cost(rid)
 		_progress.value = st["research_progress"]
-		var left := (Data.research_cost(rid) - st["research_progress"]) / maxf(0.01, rate)
+		var left: float = (Data.research_cost(rid) - st["research_progress"]) / maxf(0.01, rate)
 		_progress_label.text = "Pågår: %s   (%.1f poäng/dag, ca %d dagar kvar)" % [Data.RESEARCH[rid]["name"], rate, int(left)]
 	else:
 		_progress.value = 0

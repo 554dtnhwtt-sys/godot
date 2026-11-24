@@ -48,8 +48,9 @@ func _draw() -> void:
 		var dir := Vector2(cos(a), sin(a) * 0.6 + 0.35)
 		var tip := top + dir * 30.0 * _scale
 		var mid := top + dir * 16.0 * _scale + Vector2(0, -6 * _scale)
-		var n := Vector2(-dir.y, dir.x) * 5.0 * _scale
-		draw_colored_polygon(PackedVector2Array([top, mid + n, tip, mid - n]), leaf_c.lightened(0.08 * (i % 3)))
+		var lc := leaf_c.lightened(0.08 * (i % 3))
+		draw_line(top, mid, lc, 6.0 * _scale, true)
+		draw_line(mid, tip, lc, 3.5 * _scale, true)
 	# Kokosnötter
 	draw_circle(top + Vector2(-3, 3), 3.0 * _scale, Color(0.45, 0.3, 0.15))
 	draw_circle(top + Vector2(3, 4), 3.0 * _scale, Color(0.4, 0.27, 0.12))

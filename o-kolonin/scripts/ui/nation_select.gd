@@ -17,10 +17,10 @@ var _crisis_checks := {}
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
 	var bg := ColorRect.new()
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://shaders/ocean.gdshader")
 	mat.set_shader_parameter("size", Vector2(2400, 1400))
@@ -28,7 +28,7 @@ func _ready() -> void:
 	bg.modulate = Color(0.45, 0.45, 0.5)
 	add_child(bg)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
 	add_child(margin)
@@ -94,7 +94,7 @@ func _card(n: String) -> Button:
 	b.pressed.connect(_select.bind(n))
 	var hb := HBoxContainer.new()
 	hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hb.offset_left = 8
 	hb.offset_top = 6
 	hb.add_theme_constant_override("separation", 10)
@@ -105,11 +105,8 @@ func _card(n: String) -> Button:
 	vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vb.add_child(UITheme.label(def["short"], 19, Data.nation_color(n).lightened(0.45)))
 	vb.add_child(UITheme.label(def["type"], 14, UITheme.DIM))
-	var stars := ""
-	for i in 3:
-		stars += "★" if i <= def["difficulty"] else "☆"
 	var diff_names := ["Lätt", "Medel", "Svår"]
-	vb.add_child(UITheme.label("%s  %s" % [stars, diff_names[def["difficulty"]]], 14, UITheme.GOLD))
+	vb.add_child(UITheme.label("Svårighet: %s" % diff_names[def["difficulty"]], 14, UITheme.GOLD))
 	hb.add_child(vb)
 	_cards[n] = b
 	return b

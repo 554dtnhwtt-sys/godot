@@ -27,10 +27,10 @@ void fragment() {
 	float w1 = sin(p.x * 0.035 + p.y * 0.012 + t * 1.3 + noise(p * 0.01) * 6.0);
 	float w2 = sin(p.x * -0.018 + p.y * 0.03 + t * 1.0 + noise(p * 0.013 + 5.0) * 5.0);
 	float crest = smoothstep(0.82, 1.0, w1 * 0.6 + w2 * 0.6);
-	col += vec3(0.55, 0.9, 1.0) * crest * 0.16;
+	col += vec3(0.55, 0.9, 1.0) * crest * 0.09;
 	// Glitter
 	float g = noise(p * 0.08 + vec2(t * 0.6, -t * 0.4));
-	col += vec3(1.0) * smoothstep(0.93, 1.0, g) * 0.35;
+	col += vec3(1.0) * smoothstep(0.95, 1.0, g) * 0.25;
 	// Kanten av världen mörknar
 	vec2 e = min(UV, 1.0 - UV);
 	float edge = smoothstep(0.0, 0.08, min(e.x, e.y));

@@ -9,10 +9,10 @@ var _deco: Control
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.build()
 	var sea := ColorRect.new()
-	sea.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sea.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://shaders/ocean.gdshader")
 	mat.set_shader_parameter("size", Vector2(2400, 1400))
@@ -20,12 +20,12 @@ func _ready() -> void:
 	sea.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(sea)
 	_deco = Control.new()
-	_deco.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_deco.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_deco.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_deco.draw.connect(_draw_deco)
 	add_child(_deco)
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(520, 0)

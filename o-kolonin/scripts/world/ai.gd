@@ -244,8 +244,13 @@ func _military() -> void:
 				idle.erase(best)
 	# Krig
 	var enemies := _enemies()
-	if enemies.size() > 0 and Game.time > 30.0:
-		if attack_target == null or not Game.at_war(nation, attack_target.owner_id):
+	# Öar som pirater eller kriser tagit räknas också som mål.
+	var hostile_held := false
+	for isl in world.islands:
+		if isl.owner_id in ["vildpirater", "spokflottan", "armadan", "djupkulten"]:
+			hostile_held = true
+	if (enemies.size() > 0 or hostile_held) and Game.time > 30.0:
+		if attack_target == null or not Game.at_war(nation, attack_target.owner_id) or attack_target.owner_id == nation:
 			attack_target = _pick_attack_target(home, enemies)
 		var ready: Array = []
 		for s in idle:
@@ -285,7 +290,7 @@ func _pick_attack_target(home, enemies: Array):
 	var best = null
 	var bs := INF
 	for isl in world.islands:
-		if not isl.owner_id in enemies:
+		if not isl.owner_id in enemies and not (isl.owner_id in ["vildpirater", "spokflottan", "armadan", "djupkulten"]):
 			continue
 		var forts := 0
 		for b in isl.buildings:

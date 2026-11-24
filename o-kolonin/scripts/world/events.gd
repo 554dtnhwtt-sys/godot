@@ -210,7 +210,7 @@ func _crises(d: int) -> void:
 
 
 func _ghost_wave() -> void:
-	var count := 3 + ghost_waves_sent
+	var count := 2 + ghost_waves_sent
 	var w := Data.WORLD_SIZE
 	var edges := [Vector2(randf_range(400, w.x - 400), 80), Vector2(randf_range(400, w.x - 400), w.y - 80), Vector2(80, randf_range(400, w.y - 400)), Vector2(w.x - 80, randf_range(400, w.y - 400))]
 	var spawn: Vector2 = edges[randi() % edges.size()]

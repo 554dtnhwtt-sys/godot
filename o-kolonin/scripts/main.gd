@@ -4,6 +4,7 @@ extends Node
 const MainMenu = preload("res://scripts/ui/main_menu.gd")
 const NationSelect = preload("res://scripts/ui/nation_select.gd")
 const World = preload("res://scripts/world/world.gd")
+const AutoTest = preload("res://scripts/debug/autotest.gd")
 
 var current: Node = null
 
@@ -11,6 +12,14 @@ var current: Node = null
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	randomize()
+	# Testläge för utveckling (används bara med argument efter "--").
+	var test := AutoTest.new()
+	test.main = self
+	test.parse()
+	if test.active():
+		add_child(test)
+		test.run()
+		return
 	show_menu()
 
 
