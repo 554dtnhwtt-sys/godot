@@ -58,3 +58,11 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Ny huvudmeny med målad bild som sakta zoomar. Porträtt i nationsval, diplomati och sändebud.
 - Formationer för flottor: linje, kil och spridd.
 - Testat: inga fel i 1200 speldagar.
+
+## 24 november – pilot 0.3: ny spelmekanik
+- Eget lager per ö med lagerplats, nytt lagerhus, frakt med handelsfartyg och automatisk lastning.
+- Befolkning: bostäder, arbetare, mat och skatt. Svält om maten tar slut.
+- Guvernör per ö med fyra inriktningar. AI-nationerna använder samma logik.
+- Skepp: erfarenhetsnivåer, amiraler med egenskaper och uppgraderingar på varvet. AI:n använder också amiraler och uppgraderingar.
+- Öpanelen har nu flikar: Ön, Bygg och Skeppsvarv.
+- Testat: inga fel i 1300 speldagar med aggressiv AI och tidiga kriser.

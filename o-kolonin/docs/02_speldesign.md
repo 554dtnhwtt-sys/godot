@@ -51,3 +51,14 @@ Byggspel/idle-idéer: Pixelbyn, Kugghjulsfabriken, **Ö-kolonin (vald)**, Berget
 | Formationer | Linje, kil, spridd. Flottan seglar i det långsammaste skeppets fart |
 | Grafik | Målad stil (AI-genererad i Runway): skepp ovanifrån, byggnader snett uppifrån, palmer, gräs- och sandtexturer, menybild, ledarporträtt |
 | Ljud | Väntar. Epidemic Sound kräver betald prenumeration för nedladdning |
+
+## Spelmekanik (version 0.3)
+| Område | Hur det fungerar |
+|---|---|
+| Lager | Varje ö har eget lager (300 per vara, hemön 600, +300 per lagerhus). Guld och forskning är gemensamma för nationen |
+| Frakt | Handelsfartyg kör rutter mellan två egna öar. Överskott skickas till hemön, kolonier får byggvaror och mat de behöver. Sänkta fartyg tappar lasten – pirater och kapare tar den |
+| Befolkning | Bosättningar (20) och guvernörshus (10) ger bostäder. Invånarna äter mat, betalar skatt och arbetar i byggnaderna. För få arbetare = lägre produktion. Ingen mat = svält och folk flyttar |
+| Guvernör | Kan slås på för varje ö. Bygger själv efter vald inriktning: Balans, Råvaror, Handel eller Försvar. Sparar alltid 120 guld |
+| Erfarenhet | Skepp får erfarenhet av att skada och sänka fiender: Rekryter, Sjövana, Veteraner, Elit. Bättre omladdning, träffsäkerhet och fart |
+| Amiraler | Rekryteras för guld och sätts på ett flaggskepp. 1–2 egenskaper (Djärv, Stormseglare, Kanonmästare, Försiktig, Taktiker, Kapare, Vältalig) som gäller alla egna skepp i närheten. Kan överleva när skeppet sjunker |
+| Uppgraderingar | Vid eget skeppsvarv: fler kanoner, kopparklätt skrov, nya segel, större lastrum |

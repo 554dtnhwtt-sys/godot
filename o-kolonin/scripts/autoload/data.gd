@@ -10,13 +10,13 @@ const RESOURCES := ["guld", "tra", "mat", "sten", "sand", "kristaller", "socker"
 const RESOURCE_NAMES := {
 	"guld": "Guld", "tra": "Trä", "mat": "Mat", "sten": "Sten", "sand": "Sand",
 	"kristaller": "Kristaller", "socker": "Socker", "rom": "Rom", "kryddor": "Kryddor",
-	"parlor": "Pärlor", "forskning": "Forskning",
+	"parlor": "Pärlor", "forskning": "Forskning", "befolkning": "Befolkning",
 }
 const RESOURCE_COLORS := {
 	"guld": Color(1.0, 0.82, 0.25), "tra": Color(0.62, 0.42, 0.24), "mat": Color(0.55, 0.85, 0.35),
 	"sten": Color(0.66, 0.68, 0.72), "sand": Color(0.98, 0.88, 0.6), "kristaller": Color(0.55, 0.9, 1.0),
 	"socker": Color(0.96, 0.96, 0.92), "rom": Color(0.78, 0.42, 0.18), "kryddor": Color(0.9, 0.36, 0.2),
-	"parlor": Color(0.95, 0.9, 1.0), "forskning": Color(0.72, 0.6, 1.0),
+	"parlor": Color(0.95, 0.9, 1.0), "forskning": Color(0.72, 0.6, 1.0), "befolkning": Color(0.95, 0.75, 0.6),
 }
 ## Lyxvaror som marknader säljer automatiskt (pris i guld per enhet).
 const LUXURY_PRICES := {"rom": 3.0, "kryddor": 5.0, "parlor": 9.0}
@@ -147,45 +147,91 @@ const ISLANDS := [
 ## prod = per sekund. consumes = förbrukas per sekund (krävs för produktion).
 ## deposit = kräver att ön har den resursen. research = kräver forskningen.
 const BUILDINGS := {
-	"radhus": {"name": "Guvernörshus", "desc": "Öns hjärta. Ger guld och lite forskning.", "cost": {}, "prod": {"guld": 1.5, "forskning": 0.4}, "buildable": false, "garrison": 30, "fort": {"range": 360.0, "damage": 6.0, "reload": 3.6}, "time": 1.0},
-	"bosattning": {"name": "Bosättning", "desc": "Hem åt nybyggare. Skatten ger guld.", "cost": {"tra": 30}, "prod": {"guld": 0.8}, "time": 6.0},
-	"skogshuggare": {"name": "Skogshuggare", "desc": "Fäller palmer och hårdträ.", "cost": {"guld": 20}, "prod": {"tra": 1.2}, "deposit": "tra", "time": 6.0},
-	"kokosodling": {"name": "Kokosodling", "desc": "Kokosnötter och frukt till befolkningen.", "cost": {"tra": 25}, "prod": {"mat": 1.2}, "deposit": "mat", "time": 6.0},
-	"fiskehydda": {"name": "Fiskehydda", "desc": "Fiskare vid stranden. Fungerar på alla öar.", "cost": {"tra": 20, "guld": 10}, "prod": {"mat": 0.9}, "research": "fiske", "coastal": true, "time": 6.0},
-	"stenbrott": {"name": "Stenbrott", "desc": "Bryter sten ur klipporna.", "cost": {"tra": 40, "guld": 30}, "prod": {"sten": 0.8}, "deposit": "sten", "research": "stenbrott", "time": 9.0},
-	"sandtakt": {"name": "Sandtäkt", "desc": "Gräver upp vit korallsand.", "cost": {"tra": 30}, "prod": {"sand": 1.0}, "deposit": "sand", "time": 6.0},
-	"sockerplantage": {"name": "Sockerplantage", "desc": "Odlar sockerrör.", "cost": {"tra": 35, "guld": 20}, "prod": {"socker": 0.9}, "deposit": "socker", "research": "sockerodling", "time": 8.0},
-	"romdestilleri": {"name": "Romdestilleri", "desc": "Bränner socker till rom. Rom höjer moralen på dina skepp och säljs dyrt.", "cost": {"tra": 60, "sten": 30}, "prod": {"rom": 0.5}, "consumes": {"socker": 1.0}, "research": "romdestilleri", "time": 10.0},
-	"kryddgard": {"name": "Kryddgård", "desc": "Odlar muskot, vanilj och kanel.", "cost": {"tra": 40, "guld": 40}, "prod": {"kryddor": 0.4}, "deposit": "kryddor", "research": "kryddhandel", "time": 9.0},
-	"parldykare": {"name": "Pärldykare", "desc": "Dykare som hämtar pärlor från reven.", "cost": {"tra": 40, "guld": 50}, "prod": {"parlor": 0.25}, "deposit": "parlor", "research": "parldykning", "coastal": true, "time": 9.0},
-	"kristallgruva": {"name": "Kristallgruva", "desc": "Bryter de lysande kristallerna.", "cost": {"tra": 80, "sten": 60}, "prod": {"kristaller": 0.3}, "deposit": "kristaller", "research": "kristallgruva", "time": 14.0},
-	"guldgruva": {"name": "Guldgruva", "desc": "Gräver guld ur berget.", "cost": {"tra": 70, "sten": 50}, "prod": {"guld": 2.5}, "deposit": "guld", "research": "guldgruva", "time": 12.0},
-	"marknad": {"name": "Marknad", "desc": "Ger guld och säljer automatiskt rom, kryddor och pärlor (över en reserv på 40).", "cost": {"tra": 60, "sten": 20}, "prod": {"guld": 1.5}, "research": "marknad", "market": true, "time": 10.0},
-	"akademi": {"name": "Akademi", "desc": "Lärda män och kvinnor forskar fram nya idéer.", "cost": {"tra": 60, "sten": 30, "sand": 20}, "prod": {"forskning": 1.2}, "time": 12.0},
-	"skeppsvarv": {"name": "Skeppsvarv", "desc": "Bygger skepp. Krävs för att utöka flottan.", "cost": {"tra": 80, "guld": 50}, "prod": {}, "shipyard": true, "coastal": true, "time": 12.0},
-	"kanonbatteri": {"name": "Kanonbatteri", "desc": "Skjuter på fientliga skepp nära ön och stärker garnisonen.", "cost": {"sten": 60, "guld": 40}, "prod": {}, "fort": {"range": 420.0, "damage": 12.0, "reload": 3.2}, "garrison": 15, "research": "kanonbatteri", "coastal": true, "time": 12.0},
-	"fyrtorn": {"name": "Fyrtorn", "desc": "Skingrar dimman långt ut över havet.", "cost": {"sten": 40, "sand": 40}, "prod": {}, "vision": 1100.0, "research": "fyrtorn", "coastal": true, "time": 10.0},
-	"glasbruk": {"name": "Glasbruk", "desc": "Smälter sand till glas som säljs för guld.", "cost": {"tra": 50, "sten": 30}, "prod": {"guld": 2.2}, "consumes": {"sand": 0.8}, "research": "glasbruk", "time": 10.0},
+	"radhus": {"name": "Guvernörshus", "desc": "Öns hjärta. Ger guld, lite forskning och plats för 10 invånare.", "cost": {}, "prod": {"guld": 1.5, "forskning": 0.4}, "housing": 10, "buildable": false, "garrison": 30, "fort": {"range": 360.0, "damage": 6.0, "reload": 3.6}, "time": 1.0, "workers": 0},
+	"bosattning": {"name": "Bosättning", "desc": "Hem åt 20 nybyggare. Invånarna arbetar i byggnaderna och betalar skatt.", "cost": {"tra": 30}, "prod": {}, "housing": 20, "time": 6.0, "workers": 0},
+	"skogshuggare": {"name": "Skogshuggare", "desc": "Fäller palmer och hårdträ.", "cost": {"guld": 20}, "prod": {"tra": 1.2}, "deposit": "tra", "time": 6.0, "workers": 4},
+	"kokosodling": {"name": "Kokosodling", "desc": "Kokosnötter och frukt till befolkningen.", "cost": {"tra": 25}, "prod": {"mat": 1.2}, "deposit": "mat", "time": 6.0, "workers": 4},
+	"fiskehydda": {"name": "Fiskehydda", "desc": "Fiskare vid stranden. Fungerar på alla öar.", "cost": {"tra": 20, "guld": 10}, "prod": {"mat": 0.9}, "research": "fiske", "coastal": true, "time": 6.0, "workers": 3},
+	"stenbrott": {"name": "Stenbrott", "desc": "Bryter sten ur klipporna.", "cost": {"tra": 40, "guld": 30}, "prod": {"sten": 0.8}, "deposit": "sten", "research": "stenbrott", "time": 9.0, "workers": 6},
+	"sandtakt": {"name": "Sandtäkt", "desc": "Gräver upp vit korallsand.", "cost": {"tra": 30}, "prod": {"sand": 1.0}, "deposit": "sand", "time": 6.0, "workers": 4},
+	"sockerplantage": {"name": "Sockerplantage", "desc": "Odlar sockerrör.", "cost": {"tra": 35, "guld": 20}, "prod": {"socker": 0.9}, "deposit": "socker", "research": "sockerodling", "time": 8.0, "workers": 5},
+	"romdestilleri": {"name": "Romdestilleri", "desc": "Bränner socker till rom. Rom höjer moralen på dina skepp och säljs dyrt.", "cost": {"tra": 60, "sten": 30}, "prod": {"rom": 0.5}, "consumes": {"socker": 1.0}, "research": "romdestilleri", "time": 10.0, "workers": 6},
+	"kryddgard": {"name": "Kryddgård", "desc": "Odlar muskot, vanilj och kanel.", "cost": {"tra": 40, "guld": 40}, "prod": {"kryddor": 0.4}, "deposit": "kryddor", "research": "kryddhandel", "time": 9.0, "workers": 5},
+	"parldykare": {"name": "Pärldykare", "desc": "Dykare som hämtar pärlor från reven.", "cost": {"tra": 40, "guld": 50}, "prod": {"parlor": 0.25}, "deposit": "parlor", "research": "parldykning", "coastal": true, "time": 9.0, "workers": 4},
+	"kristallgruva": {"name": "Kristallgruva", "desc": "Bryter de lysande kristallerna.", "cost": {"tra": 80, "sten": 60}, "prod": {"kristaller": 0.3}, "deposit": "kristaller", "research": "kristallgruva", "time": 14.0, "workers": 8},
+	"guldgruva": {"name": "Guldgruva", "desc": "Gräver guld ur berget.", "cost": {"tra": 70, "sten": 50}, "prod": {"guld": 2.5}, "deposit": "guld", "research": "guldgruva", "time": 12.0, "workers": 8},
+	"marknad": {"name": "Marknad", "desc": "Ger guld och säljer automatiskt rom, kryddor och pärlor (över en reserv på 40).", "cost": {"tra": 60, "sten": 20}, "prod": {"guld": 1.5}, "research": "marknad", "market": true, "time": 10.0, "workers": 4},
+	"akademi": {"name": "Akademi", "desc": "Lärda män och kvinnor forskar fram nya idéer.", "cost": {"tra": 60, "sten": 30, "sand": 20}, "prod": {"forskning": 1.2}, "time": 12.0, "workers": 6},
+	"skeppsvarv": {"name": "Skeppsvarv", "desc": "Bygger skepp. Krävs för att utöka flottan.", "cost": {"tra": 80, "guld": 50}, "prod": {}, "shipyard": true, "coastal": true, "time": 12.0, "workers": 8},
+	"kanonbatteri": {"name": "Kanonbatteri", "desc": "Skjuter på fientliga skepp nära ön och stärker garnisonen.", "cost": {"sten": 60, "guld": 40}, "prod": {}, "fort": {"range": 420.0, "damage": 12.0, "reload": 3.2}, "garrison": 15, "research": "kanonbatteri", "coastal": true, "time": 12.0, "workers": 4},
+	"fyrtorn": {"name": "Fyrtorn", "desc": "Skingrar dimman långt ut över havet.", "cost": {"sten": 40, "sand": 40}, "prod": {}, "vision": 1100.0, "research": "fyrtorn", "coastal": true, "time": 10.0, "workers": 2},
+	"lagerhus": {"name": "Lagerhus", "desc": "Ökar öns lagerutrymme med 300 för varje vara.", "cost": {"tra": 40, "sten": 10}, "prod": {}, "storage": 300, "time": 7.0, "workers": 2},
+	"glasbruk": {"name": "Glasbruk", "desc": "Smälter sand till glas som säljs för guld.", "cost": {"tra": 50, "sten": 30}, "prod": {"guld": 2.2}, "consumes": {"sand": 0.8}, "research": "glasbruk", "time": 10.0, "workers": 6},
 }
-const BUILD_ORDER := ["bosattning", "skogshuggare", "kokosodling", "fiskehydda", "sandtakt", "stenbrott", "sockerplantage", "romdestilleri", "kryddgard", "parldykare", "kristallgruva", "guldgruva", "marknad", "glasbruk", "akademi", "skeppsvarv", "kanonbatteri", "fyrtorn"]
+const BUILD_ORDER := ["bosattning", "lagerhus", "skogshuggare", "kokosodling", "fiskehydda", "sandtakt", "stenbrott", "sockerplantage", "romdestilleri", "kryddgard", "parldykare", "kristallgruva", "guldgruva", "marknad", "glasbruk", "akademi", "skeppsvarv", "kanonbatteri", "fyrtorn"]
 const COST_GROWTH := 1.15
+
+# ---------------------------------------------------------------- Ekonomi per ö
+## Guld och forskning är gemensamma för nationen. Alla andra varor ligger i varje ös lager.
+const NATIONAL := ["guld", "forskning"]
+const GOODS := ["tra", "mat", "sten", "sand", "kristaller", "socker", "rom", "kryddor", "parlor"]
+const STORAGE_BASE := 300.0
+const STORAGE_HOME := 600.0
+## Befolkning: mat per invånare och dag, skatt i guld per invånare och dag.
+const FOOD_PER_POP := 0.045
+const TAX_PER_POP := 0.05
 
 # ---------------------------------------------------------------- Skepp
 const SHIPS := {
-	"handelsfartyg": {"name": "Handelsfartyg", "desc": "Obeväpnat. Kör handelsrutter mellan dina öar.", "hp": 110, "speed": 120.0, "cannons": 0, "range": 0.0, "reload": 99.0, "damage": 0.0, "troops": 5, "cost": {"tra": 50, "guld": 30}, "time": 10.0, "size": 1.1, "masts": 1, "trade": true},
-	"slup": {"name": "Slup", "desc": "Liten och kvick. Bra för spaning och kolonisering.", "hp": 100, "speed": 140.0, "cannons": 2, "range": 260.0, "reload": 2.6, "damage": 7.0, "troops": 10, "cost": {"tra": 60, "guld": 40}, "time": 12.0, "size": 1.0, "masts": 1},
-	"skonare": {"name": "Skonare", "desc": "Snabb tvåmastare med fler kanoner.", "hp": 150, "speed": 150.0, "cannons": 3, "range": 270.0, "reload": 2.4, "damage": 7.0, "troops": 15, "cost": {"tra": 90, "guld": 60}, "time": 15.0, "size": 1.15, "masts": 2},
-	"brigg": {"name": "Brigg", "desc": "Robust krigsskepp, flottans arbetshäst.", "hp": 240, "speed": 125.0, "cannons": 5, "range": 290.0, "reload": 2.6, "damage": 8.0, "troops": 20, "cost": {"tra": 140, "guld": 100, "sten": 20}, "time": 20.0, "size": 1.35, "masts": 2},
-	"galeon": {"name": "Galeon", "desc": "Tungt transportskepp. Bär många soldater för landstigning.", "hp": 320, "speed": 95.0, "cannons": 4, "range": 280.0, "reload": 3.0, "damage": 8.0, "troops": 60, "cost": {"tra": 180, "guld": 120}, "time": 24.0, "size": 1.6, "masts": 3},
-	"fregatt": {"name": "Fregatt", "desc": "Snabbt och tungt beväpnat. Havets jägare.", "hp": 380, "speed": 120.0, "cannons": 8, "range": 320.0, "reload": 2.6, "damage": 9.0, "troops": 25, "cost": {"tra": 220, "guld": 180, "sten": 40}, "time": 28.0, "size": 1.6, "masts": 3},
-	"linjeskepp": {"name": "Linjeskepp", "desc": "Flytande fästning med tre kanondäck.", "hp": 720, "speed": 88.0, "cannons": 14, "range": 340.0, "reload": 3.0, "damage": 10.0, "troops": 40, "cost": {"tra": 400, "guld": 320, "sten": 120, "kristaller": 20}, "time": 40.0, "size": 2.0, "masts": 3},
+	"handelsfartyg": {"name": "Handelsfartyg", "desc": "Obeväpnat. Kör handelsrutter mellan dina öar.", "hp": 110, "speed": 120.0, "cannons": 0, "range": 0.0, "reload": 99.0, "damage": 0.0, "troops": 5, "cost": {"tra": 50, "guld": 30}, "time": 10.0, "size": 1.1, "masts": 1, "trade": true, "cargo": 150},
+	"slup": {"name": "Slup", "desc": "Liten och kvick. Bra för spaning och kolonisering.", "hp": 100, "speed": 140.0, "cannons": 2, "range": 260.0, "reload": 2.6, "damage": 7.0, "troops": 10, "cost": {"tra": 60, "guld": 40}, "time": 12.0, "size": 1.0, "masts": 1, "cargo": 40},
+	"skonare": {"name": "Skonare", "desc": "Snabb tvåmastare med fler kanoner.", "hp": 150, "speed": 150.0, "cannons": 3, "range": 270.0, "reload": 2.4, "damage": 7.0, "troops": 15, "cost": {"tra": 90, "guld": 60}, "time": 15.0, "size": 1.15, "masts": 2, "cargo": 60},
+	"brigg": {"name": "Brigg", "desc": "Robust krigsskepp, flottans arbetshäst.", "hp": 240, "speed": 125.0, "cannons": 5, "range": 290.0, "reload": 2.6, "damage": 8.0, "troops": 20, "cost": {"tra": 140, "guld": 100, "sten": 20}, "time": 20.0, "size": 1.35, "masts": 2, "cargo": 80},
+	"galeon": {"name": "Galeon", "desc": "Tungt transportskepp. Bär många soldater för landstigning.", "hp": 320, "speed": 95.0, "cannons": 4, "range": 280.0, "reload": 3.0, "damage": 8.0, "troops": 60, "cost": {"tra": 180, "guld": 120}, "time": 24.0, "size": 1.6, "masts": 3, "cargo": 220},
+	"fregatt": {"name": "Fregatt", "desc": "Snabbt och tungt beväpnat. Havets jägare.", "hp": 380, "speed": 120.0, "cannons": 8, "range": 320.0, "reload": 2.6, "damage": 9.0, "troops": 25, "cost": {"tra": 220, "guld": 180, "sten": 40}, "time": 28.0, "size": 1.6, "masts": 3, "cargo": 80},
+	"linjeskepp": {"name": "Linjeskepp", "desc": "Flytande fästning med tre kanondäck.", "hp": 720, "speed": 88.0, "cannons": 14, "range": 340.0, "reload": 3.0, "damage": 10.0, "troops": 40, "cost": {"tra": 400, "guld": 320, "sten": 120, "kristaller": 20}, "time": 40.0, "size": 2.0, "masts": 3, "cargo": 120},
 	# Specialskepp för kriser
-	"spokskepp": {"name": "Spökskepp", "desc": "En död besättning seglar mot vinden.", "hp": 300, "speed": 115.0, "cannons": 7, "range": 300.0, "reload": 2.6, "damage": 9.0, "troops": 30, "cost": {}, "time": 0.0, "size": 1.55, "masts": 3, "ghost": true},
-	"armadaskepp": {"name": "Armadans linjeskepp", "desc": "Guldglänsande krigsskepp från fjärran.", "hp": 650, "speed": 85.0, "cannons": 12, "range": 330.0, "reload": 3.0, "damage": 10.0, "troops": 50, "cost": {}, "time": 0.0, "size": 1.95, "masts": 3},
-	"kristallskepp": {"name": "Kristallskepp", "desc": "Väktarnas uråldriga skepp som glöder i mörkret.", "hp": 520, "speed": 130.0, "cannons": 8, "range": 360.0, "reload": 2.2, "damage": 12.0, "troops": 30, "cost": {}, "time": 0.0, "size": 1.7, "masts": 2, "crystal": true},
-	"kultskepp": {"name": "Kultens svarta brigg", "desc": "Djupkultens skepp med offerelden tänd.", "hp": 220, "speed": 130.0, "cannons": 5, "range": 280.0, "reload": 2.6, "damage": 8.0, "troops": 20, "cost": {}, "time": 0.0, "size": 1.35, "masts": 2},
-	"kraken": {"name": "Krakenen", "desc": "Ett odjur från djupet.", "hp": 2200, "speed": 75.0, "cannons": 0, "range": 120.0, "reload": 1.6, "damage": 35.0, "troops": 0, "cost": {}, "time": 0.0, "size": 2.4, "masts": 0, "monster": true},
+	"spokskepp": {"name": "Spökskepp", "desc": "En död besättning seglar mot vinden.", "hp": 300, "speed": 115.0, "cannons": 7, "range": 300.0, "reload": 2.6, "damage": 9.0, "troops": 30, "cost": {}, "time": 0.0, "size": 1.55, "masts": 3, "ghost": true, "cargo": 0},
+	"armadaskepp": {"name": "Armadans linjeskepp", "desc": "Guldglänsande krigsskepp från fjärran.", "hp": 650, "speed": 85.0, "cannons": 12, "range": 330.0, "reload": 3.0, "damage": 10.0, "troops": 50, "cost": {}, "time": 0.0, "size": 1.95, "masts": 3, "cargo": 100},
+	"kristallskepp": {"name": "Kristallskepp", "desc": "Väktarnas uråldriga skepp som glöder i mörkret.", "hp": 520, "speed": 130.0, "cannons": 8, "range": 360.0, "reload": 2.2, "damage": 12.0, "troops": 30, "cost": {}, "time": 0.0, "size": 1.7, "masts": 2, "crystal": true, "cargo": 60},
+	"kultskepp": {"name": "Kultens svarta brigg", "desc": "Djupkultens skepp med offerelden tänd.", "hp": 220, "speed": 130.0, "cannons": 5, "range": 280.0, "reload": 2.6, "damage": 8.0, "troops": 20, "cost": {}, "time": 0.0, "size": 1.35, "masts": 2, "cargo": 60},
+	"kraken": {"name": "Krakenen", "desc": "Ett odjur från djupet.", "hp": 2200, "speed": 75.0, "cannons": 0, "range": 120.0, "reload": 1.6, "damage": 35.0, "troops": 0, "cost": {}, "time": 0.0, "size": 2.4, "masts": 0, "monster": true, "cargo": 0},
 }
+## Erfarenhet: nivåer och bonusar (omladdning, träffsäkerhet, fart).
+const XP_LEVELS := [
+	{"name": "Rekryter", "xp": 0, "reload": 1.0, "spread": 1.0, "speed": 1.0},
+	{"name": "Sjövana", "xp": 120, "reload": 0.94, "spread": 0.88, "speed": 1.03},
+	{"name": "Veteraner", "xp": 350, "reload": 0.88, "spread": 0.76, "speed": 1.06},
+	{"name": "Elit", "xp": 800, "reload": 0.8, "spread": 0.62, "speed": 1.1},
+]
+
+## Uppgraderingar på skeppsvarvet. Varje skepp kan få varje uppgradering en gång.
+const UPGRADES := {
+	"kanoner": {"name": "Fler kanoner", "desc": "+2 kanoner per sida.", "cost": {"guld": 120, "sten": 40, "tra": 30}},
+	"koppar": {"name": "Kopparklätt skrov", "desc": "+20 % skrovstyrka.", "cost": {"guld": 150, "sten": 20, "tra": 40}},
+	"segel": {"name": "Nya segel", "desc": "+10 % fart.", "cost": {"guld": 90, "tra": 30}},
+	"lastrum": {"name": "Större lastrum", "desc": "+50 % lastutrymme.", "cost": {"guld": 60, "tra": 50}},
+}
+
+## Amiraler: egenskaper som påverkar skepp nära flaggskeppet.
+const ADMIRAL_TRAITS := {
+	"djarv": {"name": "Djärv", "desc": "+15 % kanonskada i flottan.", "mods": {"cannon_dmg": 1.15}},
+	"stormseglare": {"name": "Stormseglare", "desc": "+10 % fart och ingen stormskada.", "mods": {"ship_speed": 1.1, "storm_immune": 1.0}},
+	"kanonmastare": {"name": "Kanonmästare", "desc": "Kanonerna laddar 15 % snabbare.", "mods": {"reload": 0.85}},
+	"forsiktig": {"name": "Försiktig", "desc": "Flottan tar 12 % mindre skada.", "mods": {"armor": 0.88}},
+	"taktiker": {"name": "Taktiker", "desc": "Bättre träffsäkerhet (-25 % spridning).", "mods": {"spread": 0.75}},
+	"kapare": {"name": "Kapare", "desc": "Sänkta fiendeskepp ger guld och last.", "mods": {"plunder": 1.0}},
+	"valtalig": {"name": "Vältalig", "desc": "+25 % soldater vid landstigning.", "mods": {"troops": 1.25}},
+}
+const ADMIRAL_RANGE := 650.0
+const ADMIRAL_NAMES := {
+	"valdoria": ["Don Rodrigo Vélez", "Doña Catalina Ferrer", "Don Esteban Marín", "Don Alonso de Cuervo", "Doña Inés Salvatierra", "Don Fernán Ocampo"],
+	"svartarevet": ["Jack \"Kniven\" Harrow", "Anne Svartvatten", "Bartholomew Krok", "Mary \"Krutet\" Reade", "Långe Silas", "Enögde Tobias"],
+	"kaluma": ["Tamu Vågbrytare", "Ayan Stormöga", "Kesi Revdansare", "Oruko Eldhand", "Yaro Månskära", "Ilani Djupdyk"],
+	"solmar": ["Kapten Lorenzo Vesk", "Kapten Bianca Moravel", "Kapten Matteo Orsini", "Kapten Giulia Serra", "Kapten Paolo Contarini", "Kapten Livia Dandolo"],
+}
+const ADMIRAL_COST := 150.0
+
 const SHIP_ORDER := ["handelsfartyg", "slup", "skonare", "brigg", "galeon", "fregatt", "linjeskepp"]
 const SHIP_RESEARCH := {"skonare": "skonare", "brigg": "brigg", "galeon": "galeon", "fregatt": "fregatt", "linjeskepp": "linjeskepp"}
 

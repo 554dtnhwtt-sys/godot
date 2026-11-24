@@ -19,6 +19,12 @@ var dark := false
 var guardians := false
 var trade_until := -1.0
 var ship_queue: Array = []  # [{"type", "left"}] på skeppsvarvet
+var store := {}            # öns eget lager: vara -> mängd
+var rates := {}            # förändring per dag (för gränssnittet)
+var population := 0.0
+var governor := false      # guvernören bygger automatiskt
+var governor_focus := "balans"
+var starving := false
 var last_attacked := -999.0
 var selected := false
 var world = null
@@ -303,10 +309,56 @@ func remove_building(b) -> void:
 
 func set_owner_id(new_owner: String) -> void:
 	owner_id = new_owner
+	population *= 0.5
+	governor = false
 	for b in buildings:
 		b.owner_id = new_owner
 		b.queue_redraw()
 	queue_redraw()
+
+
+# ------------------------------------------------------------------ Lager och befolkning
+func capacity() -> float:
+	var c := Data.STORAGE_HOME if home_of != "" and home_of == owner_id else Data.STORAGE_BASE
+	for b in buildings:
+		if b.is_active():
+			c += Data.BUILDINGS[b.type].get("storage", 0.0)
+	return c
+
+
+## Lägger till (eller drar av) en vara. Returnerar hur mycket som faktiskt ändrades.
+func add_good(r: String, amount: float) -> float:
+	var cur: float = store.get(r, 0.0)
+	var nv := clampf(cur + amount, 0.0, maxf(capacity(), cur))
+	store[r] = nv
+	return nv - cur
+
+
+func good(r: String) -> float:
+	return store.get(r, 0.0)
+
+
+func housing() -> float:
+	var h := 0.0
+	for b in buildings:
+		if b.is_active():
+			h += Data.BUILDINGS[b.type].get("housing", 0.0)
+	return h
+
+
+func workers_needed() -> float:
+	var w := 0.0
+	for b in buildings:
+		if b.is_active():
+			w += Data.BUILDINGS[b.type].get("workers", 0.0)
+	return w
+
+
+func work_efficiency() -> float:
+	var need := workers_needed()
+	if need <= 0.0:
+		return 1.0
+	return clampf(population / need, 0.0, 1.0)
 
 
 func trade_connected() -> bool:

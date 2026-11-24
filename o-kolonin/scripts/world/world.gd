@@ -11,6 +11,8 @@ const AIScript = preload("res://scripts/world/ai.gd")
 const EventsScript = preload("res://scripts/world/events.gd")
 const HudScript = preload("res://scripts/ui/hud.gd")
 const AmbientScript = preload("res://scripts/world/ambient.gd")
+const GovernorScript = preload("res://scripts/world/governor.gd")
+const Governor = GovernorScript
 
 ## Flottans formation när skepp får en förflyttningsorder: linje, kil, spridd.
 const FORMATIONS := {"linje": "Linje", "kil": "Kil", "spridd": "Spridd"}
@@ -113,6 +115,8 @@ func _setup_nations() -> void:
 		isl.add_building("kokosodling", true)
 		isl.add_building("bosattning", true)
 		isl.garrison = isl.max_garrison()
+		isl.store = {"tra": 160.0, "mat": 140.0, "sten": 40.0}
+		isl.population = 26.0
 		var i := 0
 		for st in def["start_ships"]:
 			var p: Vector2 = isl.coast_point_towards(Data.WORLD_SIZE * 0.5 + Vector2(i * 40, i * 30), 50.0)
@@ -254,7 +258,7 @@ func build(nation: String, isl, type: String) -> bool:
 	if isl.owner_id != nation or not Game.building_unlocked(nation, type) or not isl.can_build_type(type):
 		return false
 	var cost := Game.building_cost(nation, type)
-	if not Game.pay(nation, cost):
+	if not Game.pay_at(nation, isl, cost):
 		return false
 	isl.add_building(type)
 	return true
@@ -265,7 +269,7 @@ func queue_ship(nation: String, isl, type: String) -> bool:
 		return false
 	if isl.ship_queue.size() >= 5:
 		return false
-	if not Game.pay(nation, Game.ship_cost(nation, type)):
+	if not Game.pay_at(nation, isl, Game.ship_cost(nation, type)):
 		return false
 	isl.ship_queue.append({"type": type, "left": float(Data.SHIPS[type]["time"])})
 	return true
@@ -278,13 +282,19 @@ func try_colonize(ship, isl) -> void:
 	if isl.guardians:
 		return
 	var cost := Game.colonize_cost(n)
-	if not Game.pay(n, cost):
+	if not Game.pay_at(n, home_island(n), cost):
 		if n == Game.player:
 			Game.say("Inte råd att kolonisera %s (kräver %s)." % [isl.display_name, Data.cost_text(cost)], Color(1, 0.6, 0.5))
 		return
 	isl.set_owner_id(n)
 	isl.add_building("radhus", true)
 	isl.garrison = isl.max_garrison() * 0.5
+	# Nybyggarna tar med sig förnödenheter från skeppet.
+	isl.population = 6.0
+	isl.store = {"tra": 50.0, "mat": 50.0}
+	for g in ship.cargo:
+		isl.add_good(g, ship.cargo[g])
+	ship.cargo = {}
 	fx.text(isl.position, "Koloniserad!", Data.nation_color(n).lightened(0.4))
 	if n == Game.player:
 		Game.say("%s är nu din koloni! Bygg en handelsrutt dit för full produktion." % isl.display_name, Color(0.6, 1, 0.7))
@@ -300,7 +310,7 @@ func try_colonize(ship, isl) -> void:
 func land_troops(ship, isl) -> void:
 	if ship.troops < 1.0:
 		return
-	var power: float = ship.troops
+	var power: float = ship.troops * ship.fleet_mod("troops")
 	ship.troops = 0.0
 	isl.last_attacked = Game.time
 	fx.text(isl.coast_point_towards(ship.position, -40.0), "Landstigning!", Color(1, 0.85, 0.5))
@@ -332,26 +342,94 @@ func capture_island(isl, new_owner: String, garrison: float) -> void:
 	_check_elimination()
 
 
+# ------------------------------------------------------------------ Handel och frakt
+## Startar en handelsrutt: lastar direkt i startön och seglar mot målet.
+func start_trade(ship, a, b) -> void:
+	ship.order_trade(a, b)
+	_load_cargo(ship, a, b)
+
+
 func trade_arrival(ship, isl) -> void:
-	var was: bool = isl.trade_connected()
-	isl.trade_until = Game.time + 45.0
 	var n: String = ship.owner_id
-	var gold := 12.0 * Game.mod(n, "trade")
+	var delivered := 0.0
+	for g in ship.cargo.keys():
+		delivered += isl.add_good(g, ship.cargo[g])
+	ship.cargo = {}
+	var other = ship.trade_a if isl == ship.trade_b else ship.trade_b
+	if other != null:
+		_load_cargo(ship, isl, other)
+	var was: bool = isl.trade_connected()
+	isl.trade_until = Game.time + 60.0
+	var gold := 4.0 * Game.mod(n, "trade")
 	Game.add_res(n, "guld", gold)
 	if n == Game.player:
-		fx.text(isl.position + Vector2(0, -40), "+%d guld" % int(gold), Data.RESOURCE_COLORS["guld"])
+		if delivered >= 1.0:
+			fx.text(isl.position + Vector2(0, -40), "+%d varor levererade" % int(delivered), Color(1, 0.9, 0.6))
 		if not was and isl.home_of != n:
-			Game.say("Handelsrutten till %s är igång – ön producerar fullt." % isl.display_name, Color(1, 0.85, 0.4))
+			Game.say("Handelsrutten till %s är igång." % isl.display_name, Color(1, 0.85, 0.4))
 
 
-func on_ship_sunk(ship, attacker: String) -> void:
+## Hur mycket en ö vill behålla av en vara innan den skickar bort överskott.
+func _reserve(isl, g: String) -> float:
+	var home: bool = isl.home_of != "" and isl.home_of == isl.owner_id
+	if g == "mat":
+		return maxf(30.0, isl.population * Data.FOOD_PER_POP * 30.0) + (60.0 if home else 0.0)
+	if g in ["tra", "sten", "sand"]:
+		return 100.0 if home else 40.0
+	if g == "socker" and Governor.count_on(isl, "romdestilleri") > 0:
+		return 40.0
+	return 0.0
+
+
+## Automatisk lastning: överskott skickas till hemön, kolonier får byggvaror och mat de behöver.
+func _load_cargo(ship, from, to) -> void:
+	var space: float = ship.cargo_cap() - ship.cargo_total()
+	if space <= 1.0:
+		return
+	var to_home: bool = to.home_of != "" and to.home_of == to.owner_id
+	var wants: Array = []
+	for g in Data.GOODS:
+		var surplus: float = from.good(g) - _reserve(from, g)
+		if surplus < 1.0:
+			continue
+		var amount := surplus
+		if not to_home:
+			var target := 160.0 if g in ["tra", "sten", "mat", "sand"] else 0.0
+			if g == "mat" and to.starving:
+				target = 250.0
+			amount = minf(surplus, maxf(0.0, target - to.good(g)))
+		if amount >= 1.0:
+			wants.append([g, amount])
+	wants.sort_custom(func(x, y): return x[1] > y[1])
+	for w in wants:
+		if space < 1.0:
+			break
+		var take: float = minf(w[1], space)
+		from.add_good(w[0], -take)
+		ship.cargo[w[0]] = ship.cargo.get(w[0], 0.0) + take
+		space -= take
+
+
+func on_ship_sunk(ship, attacker: String, src = null) -> void:
 	selected_ships.erase(ship)
 	fx.splash(ship.position, 2.0)
-	if attacker != "" and Game.mod(attacker, "plunder") > 0.0:
+	var plunder := attacker != "" and Game.mod(attacker, "plunder") > 0.0
+	if src != null and is_instance_valid(src) and src._fleet_mods.has("plunder"):
+		plunder = true
+	if plunder:
 		var loot: float = 25.0 + ship.max_hp * 0.15
 		Game.add_res(attacker, "guld", loot)
+		var got := 0.0
+		if src != null and is_instance_valid(src):
+			for g in ship.cargo:
+				var take: float = minf(ship.cargo[g], src.cargo_cap() - src.cargo_total())
+				if take > 0.0:
+					src.cargo[g] = src.cargo.get(g, 0.0) + take
+					got += take
 		if attacker == Game.player:
-			fx.text(ship.position, "+%d guld (plundring)" % int(loot), Data.RESOURCE_COLORS["guld"])
+			fx.text(ship.position, "+%d guld (plundring)%s" % [int(loot), (" +%d last" % int(got)) if got >= 1.0 else ""], Data.RESOURCE_COLORS["guld"])
+	if ship.admiral != null:
+		_admiral_lost(ship)
 	if ship.owner_id == Game.player:
 		Game.say("Din %s har sjunkit!" % ship.display_name().to_lower(), Color(1, 0.5, 0.45))
 	elif attacker == Game.player:
@@ -360,6 +438,99 @@ func on_ship_sunk(ship, attacker: String) -> void:
 		events.on_ship_sunk(ship)
 	selection_changed.emit()
 	_check_elimination()
+
+
+# ------------------------------------------------------------------ Amiraler och uppgraderingar
+func admiral_cost(nation: String) -> float:
+	if not Game.is_playable(nation):
+		return 0.0
+	return Data.ADMIRAL_COST * (1.0 + Game.nations[nation]["admirals"].size() * 0.5)
+
+
+func free_admirals(nation: String) -> Array:
+	var out: Array = []
+	if Game.is_playable(nation):
+		for a in Game.nations[nation]["admirals"]:
+			if not a.get("assigned", false):
+				out.append(a)
+	return out
+
+
+func recruit_admiral(ship) -> bool:
+	var n: String = ship.owner_id
+	if ship.admiral != null or not Game.is_playable(n):
+		return false
+	var cost := admiral_cost(n)
+	if Game.res(n, "guld") < cost:
+		return false
+	Game.add_res(n, "guld", -cost)
+	var used: Array = []
+	for a in Game.nations[n]["admirals"]:
+		used.append(a["name"])
+	var names: Array = Data.ADMIRAL_NAMES.get(n, ["Kapten Okänd"]).duplicate()
+	names.shuffle()
+	var name: String = names[0]
+	for nm in names:
+		if not nm in used:
+			name = nm
+			break
+	var traits: Array = Data.ADMIRAL_TRAITS.keys()
+	traits.shuffle()
+	var adm := {"name": name, "traits": traits.slice(0, 1 + (randi() % 2)), "assigned": false}
+	Game.nations[n]["admirals"].append(adm)
+	assign_admiral(ship, adm)
+	if n == Game.player:
+		var tn: Array = []
+		for t in adm["traits"]:
+			tn.append(Data.ADMIRAL_TRAITS[t]["name"])
+		Game.say("%s (%s) tar befälet över flottan." % [name, ", ".join(tn)], Color(1, 0.9, 0.6))
+	Game.resources_changed.emit()
+	return true
+
+
+func assign_admiral(ship, adm: Dictionary) -> void:
+	if ship.admiral != null:
+		ship.admiral["assigned"] = false
+	adm["assigned"] = true
+	ship.admiral = adm
+	ship._fleet_t = 0.0
+
+
+func _admiral_lost(ship) -> void:
+	var adm: Dictionary = ship.admiral
+	ship.admiral = null
+	if not Game.is_playable(ship.owner_id):
+		return
+	if randf() < 0.6:
+		adm["assigned"] = false
+		if ship.owner_id == Game.player:
+			Game.say("%s räddade sig i en jolle och väntar på ett nytt skepp." % adm["name"], Color(1, 0.85, 0.6))
+	else:
+		Game.nations[ship.owner_id]["admirals"].erase(adm)
+		if ship.owner_id == Game.player:
+			Game.say("%s gick under med sitt skepp." % adm["name"], Color(1, 0.5, 0.45))
+
+
+## Ön med skeppsvarv där skeppet kan uppgraderas (måste ligga nära), annars null.
+func upgrade_island(ship):
+	for isl in islands:
+		if isl.owner_id == ship.owner_id and isl.has_shipyard() and ship.position.distance_to(isl.position) < isl.radius + 280.0:
+			return isl
+	return null
+
+
+func upgrade_ship(ship, key: String) -> bool:
+	if ship.upgrades.has(key):
+		return false
+	var isl = upgrade_island(ship)
+	if isl == null:
+		return false
+	if not Game.pay_at(ship.owner_id, isl, Data.UPGRADES[key]["cost"]):
+		return false
+	ship.apply_upgrade(key)
+	if ship.owner_id == Game.player:
+		Game.say("%s: %s på %s." % [Data.UPGRADES[key]["name"], ship.display_name().to_lower(), isl.display_name], Color(0.7, 0.9, 1))
+	return true
 
 
 func on_war_declared(_a: String, _b: String) -> void:
@@ -437,9 +608,33 @@ func _economy_day() -> void:
 				isl.garrison = move_toward(isl.garrison, isl.max_garrison(), 1.0)
 			continue
 		var r: Dictionary = rates[n]
-		var eff := 1.0
-		if isl.home_of != n and not isl.trade_connected():
-			eff = 0.6
+		var ir := {}
+		# Befolkningen äter, betalar skatt och växer eller krymper.
+		var food_need: float = isl.population * Data.FOOD_PER_POP
+		var food_have: float = isl.good("mat")
+		var housing: float = isl.housing()
+		if food_have >= food_need:
+			isl.add_good("mat", -food_need)
+			ir["mat"] = -food_need
+			if isl.population < housing:
+				isl.population = minf(housing, isl.population + maxf(0.4, housing * 0.025))
+			if isl.starving and n == Game.player:
+				Game.say("Invånarna på %s har mat igen." % isl.display_name, Color(0.7, 1, 0.7))
+			isl.starving = false
+		else:
+			isl.add_good("mat", -food_have)
+			ir["mat"] = -food_have
+			isl.population = maxf(0.0, isl.population - maxf(0.5, isl.population * 0.03))
+			if not isl.starving and n == Game.player:
+				Game.say("Svält på %s! Invånarna flyttar. Bygg kokosodlingar eller fiskehyddor, eller frakta dit mat." % isl.display_name, Color(1, 0.55, 0.45))
+			isl.starving = true
+		if isl.population > housing:
+			isl.population = maxf(housing, isl.population - 1.0)
+		var tax: float = isl.population * Data.TAX_PER_POP * Game.prod_mod(n, "guld")
+		Game.add_res(n, "guld", tax)
+		ir["guld"] = tax
+		# Byggnaderna producerar efter hur många arbetare som finns.
+		var eff: float = isl.work_efficiency()
 		for b in isl.buildings:
 			if not b.is_active():
 				continue
@@ -447,29 +642,35 @@ func _economy_day() -> void:
 			var cons: Dictionary = bd.get("consumes", {})
 			var ok := true
 			for c in cons:
-				if Game.res(n, c) < cons[c]:
+				if isl.good(c) < cons[c] * eff:
 					ok = false
 			if not ok:
 				continue
 			for c in cons:
-				Game.add_res(n, c, -cons[c])
-				r[c] = r.get(c, 0.0) - cons[c]
-			for p in bd["prod"]:
-				var amount: float = bd["prod"][p] * Game.prod_mod(n, p) * eff
-				if p == "guld" and bd.get("market", false):
+				isl.add_good(c, -cons[c] * eff)
+				ir[c] = ir.get(c, 0.0) - cons[c] * eff
+			for pr in bd["prod"]:
+				var amount: float = bd["prod"][pr] * Game.prod_mod(n, pr) * eff
+				if pr == "guld" and bd.get("market", false):
 					amount *= Game.mod(n, "trade")
-				Game.add_res(n, p, amount)
-				r[p] = r.get(p, 0.0) + amount
+				if Game.is_national(pr):
+					Game.add_res(n, pr, amount)
+				else:
+					amount = isl.add_good(pr, amount)
+				ir[pr] = ir.get(pr, 0.0) + amount
 			if bd.get("market", false):
 				for lux in Data.LUXURY_PRICES:
-					var have := Game.res(n, lux)
+					var have: float = isl.good(lux)
 					if have > Data.LUXURY_RESERVE:
-						var sell: float = minf(0.5, have - Data.LUXURY_RESERVE)
+						var sell: float = minf(0.5 * eff, have - Data.LUXURY_RESERVE)
 						var gold: float = sell * Data.LUXURY_PRICES[lux] * Game.mod(n, "trade")
-						Game.add_res(n, lux, -sell)
+						isl.add_good(lux, -sell)
 						Game.add_res(n, "guld", gold)
-						r[lux] = r.get(lux, 0.0) - sell
-						r["guld"] = r.get("guld", 0.0) + gold
+						ir[lux] = ir.get(lux, 0.0) - sell
+						ir["guld"] = ir.get("guld", 0.0) + gold
+		isl.rates = ir
+		for k in ir:
+			r[k] = r.get(k, 0.0) + ir[k]
 		isl.garrison = move_toward(isl.garrison, isl.max_garrison(), 0.5 + isl.max_garrison() * 0.01)
 		# Skeppsvarvets kö
 		if isl.ship_queue.size() > 0 and isl.has_shipyard():
@@ -484,6 +685,11 @@ func _economy_day() -> void:
 					Game.say("En ny %s har sjösatts på %s." % [s.display_name().to_lower(), isl.display_name], Color(0.6, 0.85, 1))
 				elif ais.has(n):
 					ais[n].on_ship_built(s)
+		# Guvernören bygger på spelarens öar
+		if n == Game.player and isl.governor and Game.day() % 3 == 0:
+			var t: String = GovernorScript.choose(n, isl, self, isl.governor_focus, 120.0)
+			if t != "" and build(n, isl, t):
+				Game.say("Guvernören på %s bygger %s." % [isl.display_name, Data.BUILDINGS[t]["name"].to_lower()], Color(0.8, 0.85, 0.75))
 	# Handelsavtal mellan nationer
 	for k in Game.relations:
 		var rel: Dictionary = Game.relations[k]
@@ -493,19 +699,42 @@ func _economy_day() -> void:
 					var g := 1.5 * Game.mod(n, "trade")
 					Game.add_res(n, "guld", g)
 					rates[n]["guld"] = rates[n].get("guld", 0.0) + g
-	# Underhåll: skeppen äter mat
+	# Underhåll: skeppen äter mat från närmaste egna ö (annars hemön)
 	for s in ships:
 		if s.is_alive() and Game.is_playable(s.owner_id):
 			var food: float = 0.08 * s.size_f
-			Game.add_res(s.owner_id, "mat", -food)
-			rates[s.owner_id]["mat"] = rates[s.owner_id].get("mat", 0.0) - food
-			if Game.res(s.owner_id, "mat") <= 0.0:
+			var src = nearest_own_island(s.owner_id, s.position, 600.0)
+			if src == null:
+				src = home_island(s.owner_id)
+			if src == null or src.good("mat") < food:
 				s.hp = maxf(1.0, s.hp - s.max_hp * 0.01)
+			else:
+				src.add_good("mat", -food)
+				rates[s.owner_id]["mat"] = rates[s.owner_id].get("mat", 0.0) - food
 	for n in Game.nations:
 		if Game.nations[n]["alive"]:
 			Game.tick_research(n)
 	Game.rates = rates
 	Game.resources_changed.emit()
+
+
+func home_island(nation: String):
+	var first = null
+	for isl in islands:
+		if isl.owner_id == nation:
+			if isl.home_of == nation:
+				return isl
+			if first == null:
+				first = isl
+	return first
+
+
+func total_population(nation: String) -> float:
+	var p := 0.0
+	for isl in islands:
+		if isl.owner_id == nation:
+			p += isl.population
+	return p
 
 
 func _update_vision() -> void:
@@ -737,7 +966,7 @@ func _order_own_island(isl) -> void:
 		if s.def.get("trade", false):
 			var start = nearest_own_island(Game.player, s.position, 500.0)
 			if start != null and start != isl:
-				s.order_trade(start, isl)
+				start_trade(s, start, isl)
 				Game.say("Handelsrutt: %s ⇄ %s" % [start.display_name, isl.display_name], Color(1, 0.85, 0.4))
 				continue
 		s.order_move(isl.coast_point_towards(s.position, 90.0))

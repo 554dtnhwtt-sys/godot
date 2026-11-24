@@ -10,11 +10,12 @@ const PRIORITY := {
 }
 ## Personlighet per nation: militär satsning, expansion och favoritgren i forskningen.
 const PERSONALITY := {
-	"valdoria": {"military": 1.2, "expand": 1.0, "tree": "skepp"},
-	"svartarevet": {"military": 1.4, "expand": 0.8, "tree": "perks"},
-	"kaluma": {"military": 0.9, "expand": 1.2, "tree": "byggnader"},
-	"solmar": {"military": 0.8, "expand": 1.3, "tree": "byggnader"},
+	"valdoria": {"military": 1.2, "expand": 1.0, "tree": "skepp", "focus": "balans"},
+	"svartarevet": {"military": 1.4, "expand": 0.8, "tree": "perks", "focus": "forsvar"},
+	"kaluma": {"military": 0.9, "expand": 1.2, "tree": "byggnader", "focus": "produktion"},
+	"solmar": {"military": 0.8, "expand": 1.3, "tree": "byggnader", "focus": "handel"},
 }
+const Governor = preload("res://scripts/world/governor.gd")
 
 var nation := ""
 var world = null
@@ -68,59 +69,20 @@ func _research() -> void:
 
 
 # ------------------------------------------------------------------ Ekonomi
+## AI:n använder samma guvernörslogik som spelarens kolonier, ö för ö.
 func _economy() -> void:
 	var my: Array = world.islands_of(nation)
-	var best_type := ""
-	var best_isl = null
-	var best_score := -INF
-	for isl in my:
-		if isl.free_slot_count() == 0:
-			continue
-		for type in Data.BUILD_ORDER:
-			if not Game.building_unlocked(nation, type) or not isl.can_build_type(type):
-				continue
-			var on_isl := 0
-			for b in isl.buildings:
-				if b.type == type:
-					on_isl += 1
-			var total: int = world.count_buildings(nation, type)
-			var score: float = PRIORITY.get(type, 3.0) - on_isl * 3.0 - total * 0.6
-			match type:
-				"skeppsvarv":
-					if on_isl > 0 or (isl.home_of != nation and my.size() < 4):
-						continue
-				"akademi":
-					if total >= 1 + my.size() / 2:
-						score -= 6.0
-				"kanonbatteri":
-					if on_isl >= 2:
-						continue
-					score += 3.0 if Game.time > Game.ai_grace() * 0.5 else -3.0
-				"romdestilleri":
-					if world.count_buildings(nation, "sockerplantage") == 0:
-						continue
-				"glasbruk":
-					if world.count_buildings(nation, "sandtakt") == 0:
-						continue
-				"marknad":
-					if on_isl > 0:
-						score -= 5.0
-				"skogshuggare":
-					if Game.res(nation, "tra") < 60.0:
-						score += 5.0
-				"kokosodling", "fiskehydda":
-					if Game.res(nation, "mat") < 40.0:
-						score += 5.0
-				"bosattning":
-					if Game.res(nation, "guld") < 50.0:
-						score += 3.0
-			score += randf() * 2.0
-			if score > best_score:
-				best_score = score
-				best_type = type
-				best_isl = isl
-	if best_type != "" and Game.can_afford(nation, Game.building_cost(nation, best_type)):
-		world.build(nation, best_isl, best_type)
+	if my.is_empty():
+		return
+	var built := 0
+	var start := _day % my.size()
+	for k in my.size():
+		var isl = my[(start + k) % my.size()]
+		var t: String = Governor.choose(nation, isl, world, pers.get("focus", "balans"), 30.0)
+		if t != "" and world.build(nation, isl, t):
+			built += 1
+			if built >= 2:
+				return
 
 
 # ------------------------------------------------------------------ Skepp
@@ -169,7 +131,7 @@ func _try_queue(yard, t: String) -> bool:
 	# Behåll en liten reserv för ekonomin.
 	var with_reserve := cost.duplicate()
 	with_reserve["tra"] = with_reserve.get("tra", 0.0) + 40.0
-	if not Game.can_afford(nation, with_reserve):
+	if not Game.can_afford_at(nation, yard, with_reserve):
 		return false
 	return world.queue_ship(nation, yard, t)
 
@@ -185,7 +147,7 @@ func on_ship_built(s) -> void:
 				if o != s and o.order == "trade" and o.trade_b == isl:
 					taken = true
 			if not taken and home != null and home.owner_id == nation:
-				s.order_trade(home, isl)
+				world.start_trade(s, home, isl)
 				return
 
 
@@ -217,6 +179,8 @@ func _military() -> void:
 			continue
 		if s.order == "idle":
 			idle.append(s)
+	# Amiraler och uppgraderingar
+	_admirals_and_upgrades(fleet, home)
 	# Försvar: öar under anfall eller med fiender i närheten.
 	for isl in my_islands:
 		var threat = world.nearest_hostile_ship(nation, isl.position, isl.radius + 700.0)
@@ -268,6 +232,33 @@ func _military() -> void:
 		var near = world.nearest_own_island(nation, s.position, 700.0)
 		if near == null:
 			s.order_move(home.coast_point_towards(s.position, 150.0 + randf() * 100.0))
+
+
+func _admirals_and_upgrades(fleet: Array, home) -> void:
+	if fleet.size() >= 4 and Game.res(nation, "guld") > world.admiral_cost(nation) + 300.0:
+		var with_adm := 0
+		for s in fleet:
+			if s.admiral != null:
+				with_adm += 1
+		if with_adm < fleet.size() / 4:
+			var best = null
+			for s in fleet:
+				if s.admiral == null and (best == null or s.max_hp > best.max_hp):
+					best = s
+			if best != null:
+				var free: Array = world.free_admirals(nation)
+				if free.size() > 0:
+					world.assign_admiral(best, free[0])
+				else:
+					world.recruit_admiral(best)
+	if Game.res(nation, "guld") > 450.0:
+		for s in fleet:
+			if s.order != "idle":
+				continue
+			for key in ["koppar", "kanoner", "segel"]:
+				if not s.upgrades.has(key) and world.upgrade_island(s) != null:
+					if world.upgrade_ship(s, key):
+						return
 
 
 func _pick_colony(home):

@@ -6,7 +6,7 @@ var balls: Array = []
 var parts: Array = []
 
 
-func fire_cannonball(from: Vector2, target, dmg: float, owner: String, bld = null, delay: float = 0.0) -> void:
+func fire_cannonball(from: Vector2, target, dmg: float, owner: String, bld = null, delay: float = 0.0, spread_f: float = 1.0, src = null) -> void:
 	var tp: Vector2
 	var tship = null
 	if target is Vector2:
@@ -18,9 +18,9 @@ func fire_cannonball(from: Vector2, target, dmg: float, owner: String, bld = nul
 	var dur: float = clampf(dist / 520.0, 0.25, 1.2)
 	if tship != null:
 		tp = tship.position + tship.velocity * (dur + delay) * 0.8
-	var spread := 5.0 + dist * 0.045
+	var spread := (5.0 + dist * 0.045) * spread_f
 	tp += Vector2(randf_range(-1.0, 1.0), randf_range(-0.7, 0.7)) * spread
-	balls.append({"from": from, "to": tp, "t": -delay, "dur": dur, "dmg": dmg, "owner": owner, "bld": bld, "h": dist * 0.12})
+	balls.append({"from": from, "to": tp, "t": -delay, "dur": dur, "dmg": dmg, "owner": owner, "bld": bld, "h": dist * 0.12, "src": src})
 
 
 func smoke(p: Vector2, n: int = 1) -> void:
@@ -86,7 +86,8 @@ func _resolve(b: Dictionary) -> void:
 		if not s.is_alive() or not Game.at_war(owner, s.owner_id):
 			continue
 		if s.position.distance_to(to) < 16.0 * s.size_f + 6.0:
-			s.take_damage(b["dmg"], owner)
+			var src = b["src"] if b["src"] != null and is_instance_valid(b["src"]) else null
+			s.take_damage(b["dmg"], owner, src)
 			return
 	for isl in world.islands:
 		if isl.contains_world_point(to):

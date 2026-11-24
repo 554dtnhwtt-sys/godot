@@ -48,6 +48,9 @@ func _draw() -> void:
 		"parlor":
 			draw_circle(c, r * 0.75, col)
 			draw_circle(c + Vector2(-r * 0.25, -r * 0.25), r * 0.22, Color(1, 1, 1))
+		"befolkning":
+			draw_circle(c + Vector2(0, -r * 0.45), r * 0.35, col)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.7, r), c + Vector2(-r * 0.45, 0), c + Vector2(r * 0.45, 0), c + Vector2(r * 0.7, r)]), col.darkened(0.2))
 		"forskning":
 			draw_rect(Rect2(c + Vector2(-r * 0.8, -r * 0.6), Vector2(r * 1.6, r * 1.2)), Color(0.9, 0.85, 0.7))
 			draw_line(c + Vector2(0, -r * 0.6), c + Vector2(0, r * 0.6), Color(0.5, 0.4, 0.3), 1.5)

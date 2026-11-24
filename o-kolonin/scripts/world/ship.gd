@@ -29,6 +29,13 @@ var shown := true
 var size_f := 1.0
 var ai_role := ""
 var speed_cap := 1.0  # sätts av formationer så att flottan håller ihop
+var cargo := {}       # last: vara -> mängd
+var xp := 0.0
+var upgrades := {}
+var admiral = null    # {"name", "traits"} om skeppet är flaggskepp
+var cannons := 0
+var _fleet_mods := {}
+var _fleet_t := 0.0
 var last_hit := -999.0
 var world = null
 var _wake: Array = []
@@ -51,6 +58,7 @@ func setup(p_type: String, p_owner: String, pos: Vector2, p_world) -> void:
 	max_troops = def["troops"] * Game.mod(owner_id, "troops")
 	troops = max_troops
 	size_f = def["size"]
+	cannons = def["cannons"]
 	heading = randf() * TAU
 	_t = randf() * 10.0
 	add_to_group("ships")
@@ -66,6 +74,73 @@ func is_monster() -> bool:
 
 func display_name() -> String:
 	return def["name"]
+
+
+# ------------------------------------------------------------------ Last, erfarenhet, amiraler
+func cargo_cap() -> float:
+	return def.get("cargo", 0.0) * (1.5 if upgrades.has("lastrum") else 1.0)
+
+
+func cargo_total() -> float:
+	var t := 0.0
+	for g in cargo:
+		t += cargo[g]
+	return t
+
+
+func level() -> int:
+	var lv := 0
+	for i in Data.XP_LEVELS.size():
+		if xp >= Data.XP_LEVELS[i]["xp"]:
+			lv = i
+	return lv
+
+
+func level_mod(key: String) -> float:
+	return Data.XP_LEVELS[level()][key]
+
+
+func gain_xp(v: float) -> void:
+	var before := level()
+	xp += v
+	if level() > before and owner_id == Game.player:
+		Game.say("Besättningen på din %s är nu %s!" % [display_name().to_lower(), Data.XP_LEVELS[level()]["name"].to_lower()], Color(0.7, 0.9, 1))
+
+
+func fleet_mod(key: String) -> float:
+	return _fleet_mods.get(key, 1.0)
+
+
+## Amiralens egenskaper gäller alla egna skepp nära flaggskeppet.
+func _refresh_fleet_mods() -> void:
+	_fleet_mods = {}
+	var flag = null
+	if admiral != null:
+		flag = self
+	else:
+		var bd := Data.ADMIRAL_RANGE
+		for o in world.ships:
+			if o.admiral != null and o.owner_id == owner_id and o.is_alive():
+				var d: float = o.position.distance_to(position)
+				if d < bd:
+					bd = d
+					flag = o
+	if flag == null:
+		return
+	for t in flag.admiral["traits"]:
+		var m: Dictionary = Data.ADMIRAL_TRAITS[t]["mods"]
+		for k in m:
+			_fleet_mods[k] = _fleet_mods.get(k, 1.0) * m[k] if k != "storm_immune" and k != "plunder" else 2.0
+
+
+func apply_upgrade(key: String) -> void:
+	upgrades[key] = true
+	match key:
+		"kanoner":
+			cannons += 2
+		"koppar":
+			max_hp *= 1.2
+			hp *= 1.2
 
 
 # ------------------------------------------------------------------ Order
@@ -126,6 +201,9 @@ func max_speed() -> float:
 		s *= 0.75
 	if order == "move":
 		s *= speed_cap
+	s *= level_mod("speed") * fleet_mod("ship_speed")
+	if upgrades.has("segel"):
+		s *= 1.1
 	return s
 
 
@@ -225,7 +303,7 @@ func _fight_goal(tp: Vector2) -> Dictionary:
 	var r := _range()
 	if is_monster():
 		return {"pos": tp, "speed": max_speed() * (0.3 if dist < r * 0.6 else 1.0)}
-	if def["cannons"] == 0:
+	if cannons == 0:
 		# Obeväpnat: fly bort.
 		return {"pos": position - to.normalized() * 300.0, "speed": max_speed()}
 	if dist > r * 0.9:
@@ -246,13 +324,17 @@ func _combat(delta: float) -> void:
 	reload_l -= delta
 	reload_r -= delta
 	_retarget -= delta
+	_fleet_t -= delta
+	if _fleet_t <= 0.0:
+		_fleet_t = 1.0
+		_refresh_fleet_mods()
 	if _retarget <= 0.0:
 		_retarget = 0.5 + randf() * 0.3
 		_auto_target = world.nearest_hostile_ship(owner_id, position, _range() * 1.6, self)
 	if is_monster():
 		_monster_attack()
 		return
-	if def["cannons"] == 0:
+	if cannons == 0:
 		return
 	var tgt = null
 	var tpos := Vector2.ZERO
@@ -288,16 +370,17 @@ func _combat(delta: float) -> void:
 
 
 func _reload_time() -> float:
-	var r: float = def["reload"] * Game.mod(owner_id, "reload")
+	var r: float = def["reload"] * Game.mod(owner_id, "reload") * level_mod("reload") * fleet_mod("reload")
 	if Game.is_playable(owner_id) and Game.res(owner_id, "rom") > 1.0:
 		r *= 0.88  # rom på skeppen ger bättre moral
 	return r * randf_range(0.9, 1.1)
 
 
 func _broadside(side: int, tgt, tpos: Vector2, bld) -> void:
-	var n: int = def["cannons"]
+	var n: int = cannons
 	var length := _hull_len()
-	var dmg: float = def["damage"] * Game.mod(owner_id, "cannon_dmg")
+	var dmg: float = def["damage"] * Game.mod(owner_id, "cannon_dmg") * fleet_mod("cannon_dmg")
+	var spread_f := level_mod("spread") * fleet_mod("spread")
 	if Game.is_playable(owner_id) and Game.res(owner_id, "rom") > 1.0:
 		dmg *= 1.1
 		Game.add_res(owner_id, "rom", -0.02 * n)
@@ -307,7 +390,7 @@ func _broadside(side: int, tgt, tpos: Vector2, bld) -> void:
 		var t := (float(i) / maxf(1, n - 1)) - 0.5 if n > 1 else 0.0
 		var from := position + fwd * t * length * 0.6 + nrm * 9.0 * size_f
 		var target = tgt if tgt != null else tpos
-		world.fx.fire_cannonball(from, target, dmg, owner_id, bld, i * 0.07)
+		world.fx.fire_cannonball(from, target, dmg, owner_id, bld, i * 0.07, spread_f, self)
 		world.fx.smoke(from + nrm * 10.0, 1)
 	if side == -1:
 		_flash_l = 0.15
@@ -323,7 +406,7 @@ func _monster_attack() -> void:
 		return
 	if position.distance_to(tgt.position) < _range() and reload_l <= 0.0:
 		reload_l = def["reload"]
-		tgt.take_damage(def["damage"], owner_id)
+		tgt.take_damage(def["damage"], owner_id, self)
 		world.fx.splash(tgt.position, 2.0)
 
 
@@ -388,24 +471,29 @@ func _upkeep(days: float) -> void:
 	if home != null and Game.time - last_hit > 8.0:
 		hp = minf(max_hp, hp + max_hp * 0.03 * days)
 		troops = minf(max_troops, troops + max_troops * 0.05 * days)
-	elif Game.storm > 0.4 and not def.get("ghost", false):
+	elif Game.storm > 0.4 and not def.get("ghost", false) and not _fleet_mods.has("storm_immune"):
 		hp -= max_hp * 0.006 * days * Game.storm
 		if hp <= 0.0:
 			hp = 1.0
-			take_damage(5.0, "")
+			take_damage(5.0, "", null)
 
 
-func take_damage(amount: float, attacker: String) -> void:
+func take_damage(amount: float, attacker: String, src = null) -> void:
 	if not is_alive():
 		return
+	amount *= fleet_mod("armor")
 	hp -= amount
 	last_hit = Game.time
 	world.fx.splinters(position)
+	if src != null and is_instance_valid(src):
+		src.gain_xp(amount * 0.5)
 	if hp <= 0.0:
 		hp = 0.0
 		sinking = 0.001
 		selected = false
-		world.on_ship_sunk(self, attacker)
+		if src != null and is_instance_valid(src):
+			src.gain_xp(40.0 + max_hp * 0.1)
+		world.on_ship_sunk(self, attacker, src)
 
 
 # ------------------------------------------------------------------ Rita
@@ -513,6 +601,22 @@ func _draw() -> void:
 		draw_rect(Rect2(-bw * 0.5, by, bw * hp / max_hp, 5), hc)
 		if selected and max_troops > 0.0:
 			draw_rect(Rect2(-bw * 0.5, by + 6, bw * troops / max_troops, 3), Color(0.85, 0.85, 1.0))
+		# Erfarenhet: små vinklar
+		for i in level():
+			var cx := -bw * 0.5 - 8.0
+			var cy := by + 5.0 - i * 4.0
+			draw_polyline(PackedVector2Array([Vector2(cx - 4, cy), Vector2(cx, cy - 3), Vector2(cx + 4, cy)]), Color(1, 0.85, 0.35), 1.5)
+	if admiral != null and sinking <= 0.0:
+		var sy := -L * 0.38 - 30.0
+		var star := PackedVector2Array()
+		for i in 10:
+			var a := -PI * 0.5 + TAU * i / 10.0
+			var rr := 7.0 if i % 2 == 0 else 3.0
+			star.append(Vector2(cos(a), sin(a)) * rr + Vector2(0, sy))
+		draw_colored_polygon(star, Color(1, 0.85, 0.3))
+		if selected:
+			var font := ThemeDB.fallback_font
+			draw_string(font, Vector2(-80, sy - 10), admiral["name"], HORIZONTAL_ALIGNMENT_CENTER, 160, 13, Color(1, 0.92, 0.7))
 	if hp < max_hp * 0.5 and sinking <= 0.0:
 		# Brand och rök när skeppet är svårt skadat
 		for i in 3:

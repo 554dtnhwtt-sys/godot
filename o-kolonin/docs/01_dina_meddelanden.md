@@ -45,3 +45,13 @@
 | Sjöslag | Som nu, men med formationer |
 | Grafik | Målad AI-grafik + animationer |
 | Ljud | Först Epidemic Sound, sedan (eftersom kontot inte får ladda ner): vänta med ljudet |
+
+## 7. Spelmekanik
+> Ställ frågor om game mekaniks. Ska man bygga helt själv osv
+
+| Fråga | Ditt svar |
+|---|---|
+| Hur ska byggandet fungera? | Guvernör som hjälper till (man bygger själv, men kan låta en guvernör bygga automatiskt) |
+| Befolkning och arbetare? | Ja, enkel befolkning |
+| Varor mellan öarna? | Eget lager per ö |
+| Hur ska flottor utvecklas? | Erfarna besättningar, amiraler, uppgraderingar på varvet |

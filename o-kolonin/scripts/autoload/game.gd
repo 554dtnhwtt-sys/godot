@@ -93,13 +93,8 @@ func new_game(new_settings: Dictionary) -> void:
 		for r in Data.RESOURCES:
 			st["res"][r] = 0.0
 		st["res"]["forskning"] = 0.0
-		st["res"]["guld"] = 200.0
-		st["res"]["tra"] = 150.0
-		st["res"]["mat"] = 100.0
-		st["res"]["sten"] = 20.0
-		var bonus: Dictionary = def.get("start_bonus", {})
-		for r in bonus:
-			st["res"][r] += bonus[r]
+		st["res"]["guld"] = 200.0 + def.get("start_bonus", {}).get("guld", 0.0)
+		st["admirals"] = []
 		for rid in def["start_research"]:
 			st["research"][rid] = true
 		nations[id] = st
@@ -164,36 +159,76 @@ func prod_mod(nation: String, res: String) -> float:
 
 
 # ------------------------------------------------------------------ Resurser
+## Guld och forskning är nationella. Varor ligger i varje ös lager (island.store).
+func is_national(r: String) -> bool:
+	return r in Data.NATIONAL
+
+
+func home_island(nation: String):
+	if world == null:
+		return null
+	return world.home_island(nation)
+
+
 func res(nation: String, r: String) -> float:
 	if not nations.has(nation):
 		return 0.0
-	return nations[nation]["res"].get(r, 0.0)
+	if is_national(r) or world == null:
+		return nations[nation]["res"].get(r, 0.0)
+	var total := 0.0
+	for isl in world.islands_of(nation):
+		total += isl.store.get(r, 0.0)
+	return total
 
 
 func add_res(nation: String, r: String, amount: float) -> void:
 	if not nations.has(nation):
 		return
-	var d: Dictionary = nations[nation]["res"]
-	d[r] = maxf(0.0, d.get(r, 0.0) + amount)
+	if is_national(r) or world == null:
+		var d: Dictionary = nations[nation]["res"]
+		d[r] = maxf(0.0, d.get(r, 0.0) + amount)
+		return
+	var home = home_island(nation)
+	if home != null:
+		home.add_good(r, amount)
 
 
-func can_afford(nation: String, cost: Dictionary) -> bool:
-	if not nations.has(nation):
+func island_res(isl, r: String) -> float:
+	if is_national(r):
+		return res(isl.owner_id, r)
+	return isl.store.get(r, 0.0)
+
+
+## Har nationen råd på just den här ön? Guld räknas från statskassan, varor från öns lager.
+func can_afford_at(nation: String, isl, cost: Dictionary) -> bool:
+	if not nations.has(nation) or isl == null:
 		return false
 	for r in cost:
-		if res(nation, r) + 0.001 < cost[r]:
+		var have: float = res(nation, r) if is_national(r) else isl.store.get(r, 0.0)
+		if have + 0.001 < cost[r]:
 			return false
 	return true
 
 
-func pay(nation: String, cost: Dictionary) -> bool:
-	if not can_afford(nation, cost):
+func pay_at(nation: String, isl, cost: Dictionary) -> bool:
+	if not can_afford_at(nation, isl, cost):
 		return false
 	for r in cost:
-		add_res(nation, r, -cost[r])
+		if is_national(r):
+			add_res(nation, r, -cost[r])
+		else:
+			isl.add_good(r, -cost[r])
 	if nation == player:
 		resources_changed.emit()
 	return true
+
+
+func can_afford(nation: String, cost: Dictionary) -> bool:
+	return can_afford_at(nation, home_island(nation), cost)
+
+
+func pay(nation: String, cost: Dictionary) -> bool:
+	return pay_at(nation, home_island(nation), cost)
 
 
 func building_cost(nation: String, type: String) -> Dictionary:
@@ -221,7 +256,7 @@ func colonize_cost(nation: String) -> Dictionary:
 	var n := 1
 	if world:
 		n = world.islands_of(nation).size()
-	return {"guld": 80.0 + 60.0 * n, "tra": 40.0 + 30.0 * n, "mat": 30.0 + 20.0 * n}
+	return {"guld": 100.0 + 70.0 * n}
 
 
 # ------------------------------------------------------------------ Forskning
