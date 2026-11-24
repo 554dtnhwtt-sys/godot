@@ -88,3 +88,11 @@ Pearl Bay, Ghost Skerry, Shark's Tooth och Sunstone Isle. Havet heter the Emeral
 | Stadsbyggnader | Skeppsvarv, marknad, akademi, lagerhus, batterier, destilleri, glasbruk och fyr finns "i staden" och byggs via stadspanelen (Build-fliken), som byggnadskedjor i Total War |
 | Resursplatser | Små miniatyrer runt ön (som Total Wars mindre bosättningar): skogsläger, palmplantage, fiskeläge, stenbrott, sandtag, sockerplantage med väderkvarn, kryddgård, pärldykare, kristallgruva, guldgruva. Klicka för att bygga och uppgradera |
 | Mindre detaljer | Inga gående invånare, inga hus, få palmer, diskreta vägar mellan staden och resursplatserna |
+
+## Övergångar mellan modeller och ö (version 0.7)
+- Alla stads- och resursmodeller är rena byggnader utan egen mark, vatten eller kust.
+- Spelet ritar en mjuk markyta under varje stad och resursplats: oregelbunden kant som tonar ut i gräset.
+  Stadens yta växer med nivån och blir stenlagd från nivå Town.
+- Hamnen (hamnmagasin) placeras vid den riktiga kusten med en brygga ut i vattnet, och en väg till staden.
+  Fiskelägen och pärldykare får egna bryggor. Båtar guppar vid bryggorna.
+- När staden växer tonas den gamla modellen över i den nya, med byggställning och damm under uppgraderingen.

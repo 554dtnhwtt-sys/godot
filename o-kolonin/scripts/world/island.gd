@@ -48,6 +48,8 @@ var town_upgrade_left := 0.0
 var plots: Array = []   # {"kind": typ eller "house"/"hall"/"plaza"/"tower", "pos": Vector2, "b": byggnad}
 var sites: Array = []   # {"res": resurs, "pos": Vector2, "b": byggnad}
 var hover_site := -1
+var harbor_pos := Vector2.ZERO   # där hamnen och bryggan ligger (på stranden)
+var harbor_out := Vector2.RIGHT  # bryggans riktning ut i vattnet (lokala koordinater)
 var buildings: Array = []
 var palms: Array = []
 var decos: Array = []
@@ -167,9 +169,16 @@ func _build_layout() -> void:
 	if volcano and c.distance_to(_volcano_center()) < radius * 0.5:
 		c = _inside(_volcano_center() + _sq(harbor_dir) * radius * 0.55, inner)
 	town_center = c
+	# Hamnen ligger vid den riktiga kusten, mot havet
+	harbor_pos = _coast_at(harbor_dir, 14.0)
+	var out := Vector2(harbor_pos.x, harbor_pos.y / Y_SQUASH).normalized()
+	harbor_out = _sq(out).normalized()
 	plots.append({"kind": "hall", "pos": c, "b": null})
 	for kind in Data.TOWN_REQ:
-		plots.append({"kind": kind, "pos": c, "b": null})
+		var pos := c
+		if kind == "skeppsvarv":
+			pos = harbor_pos - harbor_out * 26.0
+		plots.append({"kind": kind, "pos": pos, "b": null})
 	plots.append({"kind": "kanonbatteri", "pos": c, "b": null})
 	_build_sites(inner)
 
@@ -373,8 +382,11 @@ func add_building(type: String, instant: bool = false):
 	var pi := free_plot(type)
 	if pi < 0:
 		return null
-	var b = _spawn(type, plots[pi]["pos"] + Vector2(randf_range(-30, 30), randf_range(-12, 8)), instant)
-	b.concealed = true
+	var at: Vector2 = plots[pi]["pos"]
+	if type != "skeppsvarv":
+		at += Vector2(randf_range(-30, 30), randf_range(-12, 8))
+	var b = _spawn(type, at, instant)
+	b.concealed = type != "skeppsvarv"
 	plots[pi]["b"] = b
 	return b
 
@@ -584,15 +596,89 @@ func _path_pts(a: Vector2, b: Vector2) -> PackedVector2Array:
 	return out
 
 
+## En mjuk markyta som tonar ut i gräset (oregelbunden kant, ingen klipp-och-klistra-känsla).
+func _decal(c: Vector2, r: float, col: Color, seed_v: float, tex: Texture2D) -> void:
+	var n := 22
+	var inner_pts: Array = []
+	var outer_pts: Array = []
+	for i in n + 1:
+		var a := TAU * i / n
+		var wob := 1.0 + 0.13 * sin(3.0 * a + seed_v) + 0.08 * sin(5.0 * a + seed_v * 1.7) + 0.05 * sin(9.0 * a + seed_v * 0.3)
+		var dir := Vector2(cos(a), sin(a) * 0.62)
+		inner_pts.append(c + dir * r * 0.62 * wob)
+		outer_pts.append(c + dir * r * wob)
+	var solid := col
+	var clear := Color(col, 0.0)
+	var uv := func(p: Vector2) -> Vector2: return (p + Vector2(radius, radius)) / 240.0
+	for i in n:
+		var a: Vector2 = inner_pts[i]
+		var b: Vector2 = inner_pts[i + 1]
+		var oa: Vector2 = outer_pts[i]
+		var ob: Vector2 = outer_pts[i + 1]
+		draw_primitive(PackedVector2Array([c, a, b]), PackedColorArray([solid, solid, solid]), PackedVector2Array([uv.call(c), uv.call(a), uv.call(b)]), tex)
+		draw_primitive(PackedVector2Array([a, oa, ob, b]), PackedColorArray([solid, clear, clear, solid]), PackedVector2Array([uv.call(a), uv.call(oa), uv.call(ob), uv.call(b)]), tex)
+
+
+## En brygga från stranden ut i vattnet, med båtar som guppar.
+func _pier(at: Vector2, out: Vector2, length: float, boats: int) -> void:
+	var side := out.orthogonal()
+	var start := at - out * 8.0
+	var end := at + out * length
+	var wood := Color(0.45, 0.32, 0.2)
+	draw_line(start + Vector2(3, 4), end + Vector2(3, 4), Color(0, 0, 0, 0.2), 11.0)
+	draw_line(start, end, wood, 10.0)
+	var k := 0.0
+	while k <= length + 8.0:
+		var p := start + out * k
+		draw_line(p - side * 5.0, p + side * 5.0, wood.darkened(0.25), 1.5)
+		k += 7.0
+	for e in [end - side * 6.0, end + side * 6.0, start.lerp(end, 0.5) - side * 6.0]:
+		draw_circle(e + Vector2(0, 2), 2.2, wood.darkened(0.4))
+	for i in boats:
+		var bob := sin(_t * 1.6 + i * 2.0) * 1.5
+		var bp: Vector2 = at + out * (length * (0.45 + 0.35 * i)) + side * (16.0 if i % 2 == 0 else -16.0) + Vector2(0, bob)
+		var bd := out.rotated(0.25 if i % 2 == 0 else -0.25)
+		var bn := bd.orthogonal()
+		draw_colored_polygon(PackedVector2Array([bp + bd * 11.0, bp + bn * 4.5 - bd * 8.0, bp - bn * 4.5 - bd * 8.0]), Color(0.42, 0.28, 0.16))
+		draw_line(bp + bd * 6.0, bp - bd * 5.0, Color(0.6, 0.45, 0.28), 2.0)
+
+
 func _draw_town_ground() -> void:
+	var dirt: Texture2D = Art.texture("sand")
+	var dirt_c := Color(0.74, 0.6, 0.42, 0.95) if not dark else Color(0.35, 0.32, 0.3, 0.9)
+	# Resursplatsernas mark
+	for st in sites:
+		var b = st["b"]
+		if b != null and b.delay <= 0.0:
+			_decal(st["pos"] + Vector2(0, -4), 62.0, dirt_c, st["pos"].x * 0.01, dirt)
 	if town_level <= 0:
 		return
-	var road := Color(0.72, 0.6, 0.4, 0.32) if not dark else Color(0.3, 0.28, 0.26, 0.35)
+	# Stadens mark växer med nivån; stenlagt i större städer
+	var tr: float = [80.0, 100.0, 120.0, 140.0, 160.0][town_level - 1]
+	_decal(town_center + Vector2(0, -6), tr * 1.25, Color(dirt_c, 0.55), radius * 0.01, dirt)
+	_decal(town_center + Vector2(0, -6), tr, dirt_c, radius * 0.02 + 1.0, dirt)
+	if town_level >= 3:
+		_decal(town_center + Vector2(0, -10), tr * 0.75, Color(0.78, 0.76, 0.7, 0.85), radius * 0.03 + 2.0, dirt)
+	# Vägar till hamnen och resursplatserna
+	var road := Color(0.72, 0.6, 0.42, 0.42) if not dark else Color(0.3, 0.28, 0.26, 0.4)
+	var yard = null
+	for b in buildings:
+		if b.type == "skeppsvarv":
+			yard = b
+	if yard != null:
+		draw_polyline(_path_pts(town_center, harbor_pos - harbor_out * 20.0), road, 8.0, true)
+		_decal(harbor_pos - harbor_out * 26.0, 52.0, dirt_c, 3.0, dirt)
+		_pier(harbor_pos, harbor_out, 70.0, 2)
 	for st in sites:
 		var b = st["b"]
 		if b == null or b.delay > 0.0:
 			continue
 		draw_polyline(_path_pts(town_center, st["pos"]), road, 6.0, true)
+		if st["res"] == "fisk" or st["res"] == "parlor":
+			var o: Vector2 = Vector2(st["pos"].x, st["pos"].y / Y_SQUASH).normalized()
+			var out := _sq(o).normalized()
+			var coast := _coast_at(o, 4.0)
+			_pier(coast, out, 46.0, 1)
 
 
 func _draw_label() -> void:

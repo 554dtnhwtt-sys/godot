@@ -23,19 +23,21 @@ var up_time := 10.0
 var _pending_variant := ""
 var _pending_delay := 0.0
 var _pop := 0.0
+var _prev_variant := ""  # förra stadsmodellen, tonas ut när staden växer
+var _fade := 0.0
 var _t := 0.0
 var _seed := 0.0
 
 const WIDTH := {"radhus": 150.0}
-const RESOURCE_WIDTH := 104.0
-const VARIANT_WIDTH := {"town1": 190.0, "town2": 225.0, "town3": 260.0, "town4": 295.0, "town5": 330.0, "town_ancient": 280.0}
+const RESOURCE_WIDTH := 96.0
+const VARIANT_WIDTH := {"town1": 150.0, "town2": 178.0, "town3": 206.0, "town4": 234.0, "town5": 262.0, "town_ancient": 232.0}
 ## Rök från staden: punkter i bilden (andel av bredd/höjd från övre vänstra hörnet).
 const TOWN_SMOKE := {
-	"town1": [Vector2(0.5, 0.5)],
-	"town2": [Vector2(0.35, 0.38), Vector2(0.62, 0.42)],
-	"town3": [Vector2(0.3, 0.4), Vector2(0.58, 0.36), Vector2(0.72, 0.5)],
-	"town4": [Vector2(0.28, 0.42), Vector2(0.5, 0.32), Vector2(0.7, 0.45)],
-	"town5": [Vector2(0.25, 0.45), Vector2(0.45, 0.3), Vector2(0.62, 0.38), Vector2(0.78, 0.5)],
+	"town1": [Vector2(0.42, 0.55)],
+	"town2": [Vector2(0.3, 0.3), Vector2(0.62, 0.22)],
+	"town3": [Vector2(0.25, 0.3), Vector2(0.55, 0.18), Vector2(0.78, 0.38)],
+	"town4": [Vector2(0.3, 0.3), Vector2(0.52, 0.2), Vector2(0.72, 0.34)],
+	"town5": [Vector2(0.28, 0.35), Vector2(0.45, 0.22), Vector2(0.66, 0.3), Vector2(0.8, 0.45)],
 }
 func _ready() -> void:
 	max_hp = 400.0 if type == "radhus" else (260.0 if type == "kanonbatteri" else 150.0)
@@ -78,6 +80,7 @@ func _process(delta: float) -> void:
 	_t += delta
 	var days := delta / Data.DAY_SECONDS
 	_pop = maxf(0.0, _pop - delta * 1.6)
+	_fade = maxf(0.0, _fade - delta / maxf(0.001, Engine.time_scale) * 0.6)
 	if delay > 0.0:
 		delay -= days
 		queue_redraw()
@@ -97,6 +100,8 @@ func _process(delta: float) -> void:
 				upgrading = false
 				up_progress = 0.0
 				if _pending_variant != "":
+					_prev_variant = variant
+					_fade = 1.0
 					variant = _pending_variant
 					_pending_variant = ""
 				elif type != "radhus":
@@ -167,7 +172,7 @@ func _tex() -> Texture2D:
 func _rect(tex: Texture2D) -> Rect2:
 	var w: float = VARIANT_WIDTH.get(variant, WIDTH.get(type, RESOURCE_WIDTH))
 	var h := w * tex.get_height() / tex.get_width()
-	return Rect2(Vector2(-w * 0.5, -h * 0.72), Vector2(w, h))
+	return Rect2(Vector2(-w * 0.5, -h * 0.66), Vector2(w, h))
 
 
 ## Hur högt över marken byggnadens topp är (för skylten över staden).
@@ -232,6 +237,14 @@ func _draw() -> void:
 	var sq := sin(_pop * PI * 3.0) * _pop * 0.14
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0 + sq, 1.0 - sq))
 	var mod := Color(0.55, 0.5, 0.48) if ruined else Color(1, 1, 1)
+	# Mjuk övergång från förra stadsmodellen
+	if _fade > 0.0 and _prev_variant != "":
+		var old: Texture2D = Art.building(_prev_variant)
+		if old != null:
+			var ow: float = VARIANT_WIDTH.get(_prev_variant, r.size.x)
+			var oh := ow * old.get_height() / old.get_width()
+			draw_texture_rect(old, Rect2(Vector2(-ow * 0.5, -oh * 0.66), Vector2(ow, oh)), false, Color(1, 1, 1, _fade))
+		mod.a = 1.0 - _fade
 	draw_texture_rect(tex, r, false, mod)
 	draw_set_transform(Vector2.ZERO)
 	if TOWN_SMOKE.has(variant) and not ruined:

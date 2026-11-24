@@ -89,3 +89,9 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Tog bort husen, torgen, tornen, de separata stadsbyggnaderna, gående invånare och de flesta palmerna.
 - Ny skylt över varje stad med flagga, namn, nivåstjärnor, garnison och uppgraderingsmätare.
 - Testat: inga fel i 1400 speldagar.
+
+## 24 november – pilot 0.7: mjuka övergångar
+- Ny grafik i Runway (8 krediter, 59 kvar): stadsmodeller och resursbyggnader helt utan mark.
+- Mjuka markytor under städer och resursplatser, hamn med brygga vid kusten, bryggor vid fiskelägen,
+  överton mellan stadsnivåer.
+- Testat: inga fel i 1400 speldagar.
