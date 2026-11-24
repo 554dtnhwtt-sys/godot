@@ -61,3 +61,8 @@
 
 ## 9. Städer och resurser
 > Jag vill framöver att varje stad\by\koloni ska vara färdig poserad. När man uppgraderar så utökar staden lite av sig själv. Det ska finnas resurser på varje ö som man kan klicka på för att bygga en resurs byggnad. Men man ska inte kunna placera ut byggnader själv. Mindre buggigt så. Så varje stad ska ha animationer för varje level. Och även för alla resursbyggnader. Tex bygger man skeppsvarv ska det automatiskt byggas på en plats i staden som ser bra ut.
+
+## 10. Total War-stil
+> Ser inte bra ut alls. Ta inspiration från total war empire för hur en ö eller province ska se ut
+> Inte så mycket detaljer. Staden kan vara en animation. Du behöver inga separat byggnader
+> Mycket lättare och snyggare att fixa

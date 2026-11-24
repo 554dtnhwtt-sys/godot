@@ -174,17 +174,14 @@ const BUILD_ORDER := ["lagerhus", "skogshuggare", "kokosodling", "fiskehydda", "
 const COST_GROWTH := 1.05
 
 # ---------------------------------------------------------------- Städer och resursplatser
-## Varje ö har en färdigplanerad stad. Uppgraderas staden växer den av sig själv:
-## fler hus, ett större rådhus och (på högre nivåer) torg och vakttorn.
+## Varje ö är en provins med en stad (en modell per nivå, som i Total War) och resursplatser.
 const TOWN_LEVELS := [
-	{"name": "Outpost", "hall": "hall1", "housing": 20, "houses": 2, "tier": 0, "cost": {}, "time": 0.0, "garrison": 10, "storage": 0},
-	{"name": "Village", "hall": "hall2", "housing": 50, "houses": 5, "tier": 0, "cost": {"tra": 80, "mat": 40, "guld": 100}, "time": 15.0, "garrison": 20, "storage": 100},
-	{"name": "Town", "hall": "hall3", "housing": 100, "houses": 9, "tier": 1, "cost": {"tra": 160, "sten": 60, "guld": 250}, "time": 25.0, "garrison": 35, "storage": 250},
-	{"name": "City", "hall": "hall4", "housing": 170, "houses": 14, "tier": 2, "cost": {"tra": 300, "sten": 160, "sand": 60, "guld": 600}, "time": 35.0, "garrison": 55, "storage": 450},
-	{"name": "Capital", "hall": "hall5", "housing": 260, "houses": 20, "tier": 3, "cost": {"tra": 500, "sten": 300, "sand": 120, "kristaller": 15, "guld": 1200}, "time": 50.0, "garrison": 80, "storage": 700},
+	{"name": "Outpost", "hall": "town1", "housing": 20, "houses": 2, "tier": 0, "cost": {}, "time": 0.0, "garrison": 10, "storage": 0},
+	{"name": "Village", "hall": "town2", "housing": 50, "houses": 5, "tier": 0, "cost": {"tra": 80, "mat": 40, "guld": 100}, "time": 15.0, "garrison": 20, "storage": 100},
+	{"name": "Town", "hall": "town3", "housing": 100, "houses": 9, "tier": 1, "cost": {"tra": 160, "sten": 60, "guld": 250}, "time": 25.0, "garrison": 35, "storage": 250},
+	{"name": "City", "hall": "town4", "housing": 170, "houses": 14, "tier": 2, "cost": {"tra": 300, "sten": 160, "sand": 60, "guld": 600}, "time": 35.0, "garrison": 55, "storage": 450},
+	{"name": "Capital", "hall": "town5", "housing": 260, "houses": 20, "tier": 3, "cost": {"tra": 500, "sten": 300, "sand": 120, "kristaller": 15, "guld": 1200}, "time": 50.0, "garrison": 80, "storage": 700},
 ]
-## Husbilder per nivå (hyddor -> hus -> stenhus -> herrgårdar).
-const HOUSE_TIERS := [["hut1", "hut2", "hut3"], ["hut2", "house1", "house2", "house3"], ["house1", "house2", "house3", "townhouse"], ["townhouse", "mansion", "house3", "chapel"]]
 ## Stadsbyggnader placeras automatiskt på sin plats i staden. Kräver en viss stadsnivå.
 const TOWN_REQ := {"skeppsvarv": 1, "lagerhus": 1, "marknad": 2, "akademi": 2, "kanonbatteri": 2, "romdestilleri": 2, "glasbruk": 3, "fyrtorn": 3}
 ## Resursplatser på öarna och vilken byggnad som byggs där.

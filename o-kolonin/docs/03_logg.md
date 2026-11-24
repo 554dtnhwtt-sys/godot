@@ -82,3 +82,10 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Öpanelen har nu flikarna Town, Resources, Build och Shipyard.
 - Guvernören och AI:n uppgraderar städer, bygger på resursplatser och sparar till nästa stadsnivå.
 - Testat: inga fel i 1400 speldagar.
+
+## 24 november – pilot 0.6: provinser i Total War-stil
+- Ny grafik i Runway (8 krediter, 67 kvar): 5 stadsmodeller + Väktarnas tempelstad, 12 miniatyrer för resursplatser,
+  hamn och fort. Brickornas kanter tonades ut så att modellerna smälter in i ön.
+- Tog bort husen, torgen, tornen, de separata stadsbyggnaderna, gående invånare och de flesta palmerna.
+- Ny skylt över varje stad med flagga, namn, nivåstjärnor, garnison och uppgraderingsmätare.
+- Testat: inga fel i 1400 speldagar.

@@ -983,7 +983,7 @@ func toggle_menu() -> void:
 		return
 	show_popup({
 		"title": "Island Colony – menu",
-		"text": "%s\n%s\nPilot version 0.5" % [Data.nation_name(Game.player), Game.date_text()],
+		"text": "%s\n%s\nPilot version 0.6" % [Data.nation_name(Game.player), Game.date_text()],
 		"buttons": [
 			{"text": "Continue", "cb": Callable()},
 			{"text": "Help and controls", "cb": show_help},

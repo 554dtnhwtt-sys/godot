@@ -79,3 +79,12 @@ Pearl Bay, Ghost Skerry, Shark's Tooth och Sunstone Isle. Havet heter the Emeral
 | Nivåer på resursbyggnader | Nivå 1–3 (170 % och 250 % produktion, fler arbetare). Nivå 2 kräver Village, nivå 3 kräver Town |
 | Ingen egen placering | Spelaren väljer vad som byggs, aldrig var |
 | Animationer | Byggnader reser sig ur byggställningar med arbetare och damm och studsar när de är klara. Arbetsanimationer: flisor (skogshuggare), kokosnötter som faller, fiskebåtar som ror ut, damm (stenbrott, sand), sockerrör som vajar, gnistor (kryddor, kristaller, varv), gruvvagn med guld, folk på marknaden, lådor vid lagret, fyrens ljusstråle, rök från skorstenar. Vägar från torget till alla byggnader och invånare som går på dem |
+
+## Provinser i Total War-stil (version 0.6, ersätter stadsplanen i 0.5)
+| Område | Hur det fungerar |
+|---|---|
+| Ön = provins | En stadsmodell i mitten (en bild per nivå) med rök, skylt, flagga, nivåstjärnor och garnison. Inga separata hus eller stadsbyggnader på kartan |
+| Stadsnivåer | Outpost (palissadläger) → Village (palmby) → Town (kolonialstad med kyrka) → City (befäst stad) → Capital (huvudstad med citadell). Väktarnas ö är en uråldrig tempelstad |
+| Stadsbyggnader | Skeppsvarv, marknad, akademi, lagerhus, batterier, destilleri, glasbruk och fyr finns "i staden" och byggs via stadspanelen (Build-fliken), som byggnadskedjor i Total War |
+| Resursplatser | Små miniatyrer runt ön (som Total Wars mindre bosättningar): skogsläger, palmplantage, fiskeläge, stenbrott, sandtag, sockerplantage med väderkvarn, kryddgård, pärldykare, kristallgruva, guldgruva. Klicka för att bygga och uppgradera |
+| Mindre detaljer | Inga gående invånare, inga hus, få palmer, diskreta vägar mellan staden och resursplatserna |

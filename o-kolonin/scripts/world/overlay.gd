@@ -12,6 +12,71 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+const TOWN_HEIGHT := [70.0, 86.0, 100.0, 116.0, 130.0]
+
+
+## Skylt i Total War-stil över varje stad: flagga, namn, nivåstjärnor och garnison.
+func _draw_banners(z: float) -> void:
+	var font := ThemeDB.fallback_font
+	var k := 1.0 / sqrt(z)
+	for isl in world.islands:
+		if not world.fog.is_explored(isl.position):
+			continue
+		var owner: String = isl.owner_id
+		var fs := int(20.0 * k)
+		var w := font.get_string_size(isl.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		if owner == "neutral" or isl.town_level <= 0:
+			var p: Vector2 = isl.position + Vector2(-w * 0.5, -isl.radius * 0.72 - 30.0)
+			draw_string(font, p + Vector2(1.5, 1.5), isl.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.6))
+			draw_string(font, p, isl.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 0.97, 0.88, 0.9))
+			continue
+		var h = isl.hall()
+		var th: float = h.top_height() if h != null else TOWN_HEIGHT[isl.town_level - 1]
+		var top: Vector2 = isl.position + isl.town_center + Vector2(0, -th - 8.0 * k)
+		var pw := w + 50.0 * k
+		var ph := 44.0 * k
+		var rect := Rect2(top - Vector2(pw * 0.5, ph), Vector2(pw, ph))
+		var col := Data.nation_color(owner)
+		var acc := Data.nation_accent(owner)
+		# Flaggstång och flagga till vänster om skylten
+		var pole := rect.position + Vector2(-10.0 * k, ph)
+		draw_line(pole, pole + Vector2(0, -ph - 22.0 * k), Color(0.3, 0.22, 0.14), 2.5 * k)
+		var ft := pole + Vector2(0, -ph - 22.0 * k)
+		var wave := sin(_t * 3.0 + isl.radius) * 3.0 * k
+		var fw := 30.0 * k
+		var fh := 20.0 * k
+		draw_colored_polygon(PackedVector2Array([ft, ft + Vector2(fw, wave), ft + Vector2(fw, fh + wave), ft + Vector2(0, fh)]), col)
+		draw_line(ft + Vector2(0, fh * 0.5), ft + Vector2(fw, fh * 0.5 + wave), acc, 3.0 * k)
+		# Namnplåt
+		draw_rect(rect, Color(0.07, 0.05, 0.04, 0.88))
+		draw_rect(rect, Color(0.85, 0.68, 0.36), false, 1.5 * k)
+		draw_rect(Rect2(rect.position, Vector2(5.0 * k, ph)), col)
+		draw_string(font, rect.position + Vector2(12.0 * k, 21.0 * k), isl.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 0.95, 0.82))
+		# Nivåstjärnor
+		for i in Data.TOWN_LEVELS.size():
+			var sc := rect.position + Vector2(17.0 * k + i * 13.0 * k, 34.0 * k)
+			var filled: bool = i < isl.town_level
+			_star(sc, 4.5 * k, Color(1, 0.82, 0.3) if filled else Color(0.4, 0.36, 0.3))
+		# Garnison (sköld med antal soldater)
+		var gx := rect.end.x - 30.0 * k
+		var shield := PackedVector2Array([Vector2(gx, rect.position.y + 22.0 * k), Vector2(gx + 9.0 * k, rect.position.y + 22.0 * k), Vector2(gx + 9.0 * k, rect.position.y + 30.0 * k), Vector2(gx + 4.5 * k, rect.position.y + 35.0 * k), Vector2(gx, rect.position.y + 30.0 * k)])
+		draw_colored_polygon(shield, col.lightened(0.2))
+		draw_string(font, Vector2(gx + 12.0 * k, rect.position.y + 34.0 * k), str(int(isl.garrison)), HORIZONTAL_ALIGNMENT_LEFT, -1, int(12.0 * k), Color(0.9, 0.9, 0.85))
+		if isl.town_upgrade_left > 0.0:
+			var total: float = Data.TOWN_LEVELS[isl.town_level]["time"]
+			var frac: float = 1.0 - isl.town_upgrade_left / total
+			draw_rect(Rect2(rect.position + Vector2(0, ph + 3.0 * k), Vector2(pw, 5.0 * k)), Color(0, 0, 0, 0.6))
+			draw_rect(Rect2(rect.position + Vector2(0, ph + 3.0 * k), Vector2(pw * frac, 5.0 * k)), Color(0.6, 0.85, 1.0))
+
+
+func _star(c: Vector2, r: float, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 10:
+		var a := -PI * 0.5 + TAU * i / 10.0
+		pts.append(c + Vector2(cos(a), sin(a)) * (r if i % 2 == 0 else r * 0.45))
+	draw_colored_polygon(pts, col)
+
+
 ## Ikoner över resursplatserna på egna och obebodda öar. Hovrad plats får en ring och text.
 func _draw_sites(z: float) -> void:
 	var font := ThemeDB.fallback_font
@@ -58,6 +123,7 @@ func _draw() -> void:
 		return
 	var z: float = world.cam.zoom.x if world.cam else 1.0
 	var lw := 2.0 / z
+	_draw_banners(z)
 	_draw_sites(z)
 	for s in world.selected_ships:
 		if not is_instance_valid(s) or not s.is_alive():

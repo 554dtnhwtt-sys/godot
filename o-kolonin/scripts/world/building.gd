@@ -16,6 +16,7 @@ var hp := 150.0
 var max_hp := 150.0
 var reload := 0.0
 var ruined := false
+var concealed := false       # stadsbyggnader finns i staden och ritas inte separat
 var upgrading := false
 var up_progress := 0.0
 var up_time := 10.0
@@ -25,21 +26,17 @@ var _pop := 0.0
 var _t := 0.0
 var _seed := 0.0
 
-const WIDTH := {
-	"radhus": 104.0, "akademi": 104.0, "fyrtorn": 66.0, "kanonbatteri": 96.0, "marknad": 100.0,
-	"skeppsvarv": 108.0, "sandtakt": 90.0, "glasbruk": 80.0, "sockerplantage": 96.0, "kokosodling": 96.0,
-	"lagerhus": 92.0, "hus": 66.0,
+const WIDTH := {"radhus": 150.0}
+const RESOURCE_WIDTH := 104.0
+const VARIANT_WIDTH := {"town1": 190.0, "town2": 225.0, "town3": 260.0, "town4": 295.0, "town5": 330.0, "town_ancient": 280.0}
+## Rök från staden: punkter i bilden (andel av bredd/höjd från övre vänstra hörnet).
+const TOWN_SMOKE := {
+	"town1": [Vector2(0.5, 0.5)],
+	"town2": [Vector2(0.35, 0.38), Vector2(0.62, 0.42)],
+	"town3": [Vector2(0.3, 0.4), Vector2(0.58, 0.36), Vector2(0.72, 0.5)],
+	"town4": [Vector2(0.28, 0.42), Vector2(0.5, 0.32), Vector2(0.7, 0.45)],
+	"town5": [Vector2(0.25, 0.45), Vector2(0.45, 0.3), Vector2(0.62, 0.38), Vector2(0.78, 0.5)],
 }
-const VARIANT_WIDTH := {"hall1": 86.0, "hall2": 96.0, "hall3": 106.0, "hall4": 122.0, "hall5": 136.0, "plaza": 104.0, "tower": 64.0, "chapel": 72.0, "mansion": 74.0, "townhouse": 70.0}
-## Var skorstenar sitter i bilden (andel av bredd/höjd från övre vänstra hörnet).
-const SMOKE := {"romdestilleri": Vector2(0.44, 0.05), "glasbruk": Vector2(0.43, 0.03), "townhouse": Vector2(0.5, 0.06), "hall1": Vector2(0.48, 0.55)}
-## Extra dekoration vid resursbyggnader på nivå 2 och 3.
-const LEVEL_DECO := {
-	"skogshuggare": "palm2", "kokosodling": "palm1", "stenbrott": "sten", "sandtakt": "sand", "sockerplantage": "socker",
-	"kryddgard": "kryddor", "parldykare": "parlor", "kristallgruva": "kristaller", "guldgruva": "guld", "fiskehydda": "parlor",
-}
-
-
 func _ready() -> void:
 	max_hp = 400.0 if type == "radhus" else (260.0 if type == "kanonbatteri" else 150.0)
 	hp = max_hp
@@ -168,11 +165,17 @@ func _tex() -> Texture2D:
 
 
 func _rect(tex: Texture2D) -> Rect2:
-	var w: float = VARIANT_WIDTH.get(variant, WIDTH.get(type, 88.0))
-	if type == "hus" and not VARIANT_WIDTH.has(variant):
-		w = WIDTH["hus"]
+	var w: float = VARIANT_WIDTH.get(variant, WIDTH.get(type, RESOURCE_WIDTH))
 	var h := w * tex.get_height() / tex.get_width()
 	return Rect2(Vector2(-w * 0.5, -h * 0.72), Vector2(w, h))
+
+
+## Hur högt över marken byggnadens topp är (för skylten över staden).
+func top_height() -> float:
+	var tex := _tex()
+	if tex == null:
+		return 80.0
+	return _rect(tex).size.y * 0.72
 
 
 func _flag(p: Vector2, h: float) -> void:
@@ -199,20 +202,13 @@ func _scaffold(r: Rect2, frac: float) -> void:
 	draw_texture_rect(sc, Rect2(Vector2(-sw * 0.5, -sh * 0.85), Vector2(sw, sh)), false)
 
 
-func _worker(p: Vector2, phase: float) -> void:
-	var hit := absf(sin(_t * 6.0 + phase))
-	draw_rect(Rect2(p + Vector2(-2, -8), Vector2(4, 7)), Color(0.75, 0.45, 0.25))
-	draw_circle(p + Vector2(0, -10), 2.2, Color(0.55, 0.38, 0.26))
-	draw_line(p + Vector2(2, -7), p + Vector2(6, -11 + hit * 6.0), Color(0.35, 0.25, 0.15), 1.5)
-
-
 func _bar(y: float, frac: float, col: Color) -> void:
 	draw_rect(Rect2(-24, y, 48, 6), Color(0, 0, 0, 0.6))
 	draw_rect(Rect2(-24, y, 48 * frac, 6), col)
 
 
 func _draw() -> void:
-	if delay > 0.0:
+	if delay > 0.0 or concealed:
 		return
 	var tex := _tex()
 	if tex == null:
@@ -229,28 +225,24 @@ func _draw() -> void:
 		var src := Rect2(0, ts.y * (1.0 - p), ts.x, ts.y * p)
 		var dst := Rect2(r.position.x, r.position.y + r.size.y * (1.0 - p), r.size.x, r.size.y * p)
 		draw_texture_rect_region(tex, dst, src, Color(1, 1, 1, 0.9))
-		_scaffold(r, 0.72)
-		_worker(Vector2(-r.size.x * 0.3, 2), 0.0)
-		_worker(Vector2(r.size.x * 0.32, 4), 1.7)
+		_scaffold(r, 0.6)
 		_bar(12, p, Color(0.95, 0.8, 0.3))
 		return
 	# Studs när bygget blir klart
 	var sq := sin(_pop * PI * 3.0) * _pop * 0.14
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0 + sq, 1.0 - sq))
-	if level >= 2 and LEVEL_DECO.has(type):
-		_level_deco(r)
 	var mod := Color(0.55, 0.5, 0.48) if ruined else Color(1, 1, 1)
 	draw_texture_rect(tex, r, false, mod)
 	draw_set_transform(Vector2.ZERO)
-	var key := variant if variant != "" else type
-	if SMOKE.has(key) and not ruined:
-		var sp: Vector2 = SMOKE[key]
-		_smoke(r.position + Vector2(r.size.x * sp.x, r.size.y * sp.y))
+	if TOWN_SMOKE.has(variant) and not ruined:
+		for sp in TOWN_SMOKE[variant]:
+			_smoke(r.position + Vector2(r.size.x * sp.x, r.size.y * sp.y))
 	if not ruined and is_active():
 		_work_anim(r)
 	if upgrading:
-		_scaffold(r, 0.5)
-		_worker(Vector2(r.size.x * 0.34, 4), 0.6)
+		_scaffold(r, 0.4)
+		if randf() < 0.05 and Game.world:
+			Game.world.fx.dust(global_position + Vector2(randf_range(-r.size.x * 0.3, r.size.x * 0.3), -4))
 		if _pending_delay <= 0.0:
 			_bar(12, up_progress, Color(0.6, 0.85, 1.0))
 	if level >= 2:
@@ -265,86 +257,20 @@ func _draw() -> void:
 		_bar(14, hp / max_hp, Color(0.9, 0.3, 0.25))
 
 
-func _level_deco(r: Rect2) -> void:
-	var dt: Texture2D = Art.deco(LEVEL_DECO[type])
-	if dt == null:
-		return
-	var w := r.size.x * 0.42
-	var h := w * dt.get_height() / dt.get_width()
-	draw_texture_rect(dt, Rect2(Vector2(r.size.x * 0.28, -h * 0.85 + 6), Vector2(w, h)), false)
-	if level >= 3:
-		draw_texture_rect(dt, Rect2(Vector2(-r.size.x * 0.28 - w, -h * 0.85 + 8), Vector2(w, h)), false)
-
-
-## Små animationer som visar att byggnaden arbetar.
+## Diskreta animationer som visar att platsen arbetar.
 func _work_anim(r: Rect2) -> void:
 	var ph := fmod(_t + _seed, 1000.0)
-	match key_type():
-		"radhus":
-			_flag(r.position + Vector2(r.size.x * 0.86, r.size.y * 0.3), 26.0)
-		"kanonbatteri", "skeppsvarv":
-			_flag(r.position + Vector2(r.size.x * 0.86, r.size.y * 0.3), 26.0)
-			if type == "skeppsvarv":
-				# Gnistor från hammarslag på skrovet
-				var k := fmod(ph * 1.3, 1.0)
-				if k < 0.3:
-					for i in 4:
-						var a := -PI * 0.5 + (i - 1.5) * 0.5
-						draw_line(Vector2(-6, -18), Vector2(-6, -18) + Vector2.from_angle(a) * (4.0 + k * 22.0), Color(1, 0.85, 0.3, 1.0 - k / 0.3), 1.5)
-		"skogshuggare":
-			var k := fmod(ph * 0.6, 1.0)
-			if k < 0.4:
-				for i in 5:
-					var a := -PI * 0.5 + (i - 2) * 0.6
-					var d := k * 40.0
-					draw_rect(Rect2(Vector2(r.size.x * 0.18, -10) + Vector2.from_angle(a) * d + Vector2(0, k * k * 60.0), Vector2(3, 2)), Color(0.75, 0.55, 0.3, 1.0 - k / 0.4))
-			_worker(Vector2(r.size.x * 0.12, 6), 0.0)
-		"kokosodling":
-			for i in 2:
-				var k := fmod(ph * 0.35 + i * 0.5, 1.0)
-				var x := -r.size.x * 0.25 + i * r.size.x * 0.4
-				draw_circle(Vector2(x, -r.size.y * 0.45 + k * k * r.size.y * 0.45), 3.0, Color(0.45, 0.3, 0.15, 1.0 - maxf(0.0, k - 0.85) * 6.0))
+	match type:
 		"fiskehydda", "parldykare":
 			_boat(r)
-		"stenbrott", "sandtakt":
-			var k := fmod(ph * 0.5, 1.0)
-			var col := Color(0.8, 0.8, 0.78) if type == "stenbrott" else Color(1.0, 0.93, 0.72)
-			draw_circle(Vector2(sin(_seed) * 14.0, -10 - k * 22.0), 5.0 + k * 10.0, Color(col, 0.5 * (1.0 - k)))
-			_worker(Vector2(-r.size.x * 0.2, 4), 1.0)
-		"sockerplantage":
-			skew = sin(_t * 1.4 + _seed) * 0.035
-		"kryddgard", "kristallgruva":
-			var col := Color(1, 0.55, 0.2) if type == "kryddgard" else Color(0.55, 0.95, 1.0)
-			for i in 3:
-				var k := fmod(ph * 0.7 + i * 0.33, 1.0)
-				var p := Vector2(sin(i * 2.3 + _seed) * r.size.x * 0.3, -10 - k * 30.0)
-				draw_circle(p, 2.0 * (1.0 - k) + 0.5, Color(col, 1.0 - k))
-			if type == "kristallgruva":
-				draw_circle(r.position + Vector2(r.size.x * 0.55, r.size.y * 0.45), 18.0, Color(0.5, 0.95, 1.0, 0.1 + 0.08 * sin(_t * 2.2)))
-		"guldgruva":
-			var x := sin(ph * 0.8) * r.size.x * 0.25
-			draw_rect(Rect2(Vector2(x - 7, -6), Vector2(14, 7)), Color(0.4, 0.3, 0.2))
-			draw_circle(Vector2(x - 4, 2), 2.5, Color(0.2, 0.2, 0.2))
-			draw_circle(Vector2(x + 4, 2), 2.5, Color(0.2, 0.2, 0.2))
-			draw_circle(Vector2(x, -8), 3.5, Color(1, 0.84, 0.3))
-		"marknad":
-			for i in 4:
-				var x := sin(ph * (0.4 + i * 0.1) + i * 1.7) * r.size.x * 0.32
-				var cloth: Color = [Color(0.85, 0.3, 0.25), Color(0.25, 0.45, 0.8), Color(0.95, 0.85, 0.6), Color(0.35, 0.6, 0.3)][i]
-				draw_rect(Rect2(Vector2(x - 2, 2 - 8), Vector2(4, 7)), cloth)
-				draw_circle(Vector2(x, 2 - 10), 2.2, Color(0.55, 0.38, 0.26))
-		"lagerhus":
+		"skogshuggare", "stenbrott", "sandtakt", "guldgruva":
 			var k := fmod(ph * 0.3, 1.0)
-			var x := lerpf(-r.size.x * 0.35, r.size.x * 0.1, k)
-			draw_rect(Rect2(Vector2(x - 5, -4), Vector2(10, 8)), Color(0.6, 0.42, 0.22))
-			_worker(Vector2(x - 9, 6), 0.0)
-		"fyrtorn":
-			var lamp := r.position + Vector2(r.size.x * 0.48, r.size.y * 0.13)
-			draw_circle(lamp, 10.0, Color(1, 0.95, 0.6, 0.35 * (0.55 + 0.25 * sin(_t * 3.0))))
-			var beam := Vector2(cos(_t * 1.1), sin(_t * 1.1) * 0.4) * 140.0
-			draw_colored_polygon(PackedVector2Array([lamp, lamp + beam + beam.orthogonal() * 0.12, lamp + beam - beam.orthogonal() * 0.12]), Color(1, 0.95, 0.6, 0.14))
-		"akademi":
-			draw_circle(r.position + Vector2(r.size.x * 0.5, r.size.y * 0.55), 10.0, Color(1, 0.95, 0.7, 0.08 + 0.06 * sin(_t * 1.5)))
+			var col := Color(0.8, 0.78, 0.74) if type != "sandtakt" else Color(1.0, 0.93, 0.72)
+			draw_circle(r.position + Vector2(r.size.x * 0.5, r.size.y * 0.4) + Vector2(k * 8.0, -k * 26.0), 3.0 + k * 7.0, Color(col, 0.4 * (1.0 - k)))
+		"sockerplantage":
+			skew = sin(_t * 1.2 + _seed) * 0.025
+		"kristallgruva":
+			draw_circle(r.position + Vector2(r.size.x * 0.5, r.size.y * 0.45), r.size.x * 0.3, Color(0.5, 0.95, 1.0, 0.08 + 0.06 * sin(_t * 2.2)))
 
 
 func key_type() -> String:
