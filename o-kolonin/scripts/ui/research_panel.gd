@@ -28,11 +28,11 @@ func rebuild() -> void:
 		c.queue_free()
 	var p := Game.player
 	var head := HBoxContainer.new()
-	head.add_child(UITheme.label("Forskning", 26, UITheme.GOLD))
+	head.add_child(UITheme.label("Research", 26, UITheme.GOLD))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
-	head.add_child(UITheme.button("Stäng (F)", func(): visible = false, 15))
+	head.add_child(UITheme.button("Close (F)", func(): visible = false, 15))
 	_content.add_child(head)
 	var info := HBoxContainer.new()
 	info.add_theme_constant_override("separation", 14)
@@ -46,7 +46,7 @@ func rebuild() -> void:
 	_queue_label = UITheme.label("", 14, UITheme.DIM)
 	info.add_child(_queue_label)
 	_content.add_child(info)
-	_content.add_child(UITheme.wrap_label("Klicka på ett projekt för att forska (eller köa det). Klicka igen för att avbryta. Akademier ger mer forskning.", 13, UITheme.DIM))
+	_content.add_child(UITheme.wrap_label("Click a project to research it (or queue it). Click again to cancel. Academies give more research.", 13, UITheme.DIM))
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 14)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -87,28 +87,28 @@ func _card(p: String, rid: String) -> Button:
 	var state := ""
 	var col := Color(1, 1, 1)
 	if Game.has_research(p, rid):
-		state = "KLAR"
+		state = "DONE"
 		col = Color(0.6, 1.0, 0.6)
 	elif st["current_research"] == rid:
-		state = "PÅGÅR"
+		state = "IN PROGRESS"
 		col = Color(0.85, 0.75, 1.3)
 	elif rid in st["research_queue"]:
-		state = "I KÖ (%d)" % (st["research_queue"].find(rid) + 1)
+		state = "QUEUED (%d)" % (st["research_queue"].find(rid) + 1)
 		col = Color(0.7, 0.9, 1.2)
 	elif Game.research_available(p, rid):
-		state = "%d poäng" % int(Data.research_cost(rid))
+		state = "%d points" % int(Data.research_cost(rid))
 	else:
-		state = "LÅST"
+		state = "LOCKED"
 		col = Color(0.55, 0.55, 0.55)
 	b.text = "%s  –  %s\n%s" % [r["name"], state, r["desc"]]
 	b.add_theme_font_size_override("font_size", 14)
 	b.modulate = col
-	var tip := "%s\n%s\nKostnad: %d forskningspoäng" % [r["name"], r["desc"], int(Data.research_cost(rid))]
+	var tip := "%s\n%s\nCost: %d research points" % [r["name"], r["desc"], int(Data.research_cost(rid))]
 	if r["req"].size() > 0:
 		var names: Array = []
 		for q in r["req"]:
-			names.append(Data.RESEARCH[q]["name"] + (" ✓" if Game.has_research(p, q) else ""))
-		tip += "\nKräver: " + ", ".join(names)
+			names.append(Data.RESEARCH[q]["name"] + (" (done)" if Game.has_research(p, q) else ""))
+		tip += "\nRequires: " + ", ".join(names)
 	b.tooltip_text = tip
 	b.pressed.connect(_on_click.bind(rid))
 	return b
@@ -156,11 +156,11 @@ func update_progress() -> void:
 		_progress.max_value = Data.research_cost(rid)
 		_progress.value = st["research_progress"]
 		var left: float = (Data.research_cost(rid) - st["research_progress"]) / maxf(0.01, rate)
-		_progress_label.text = "Pågår: %s   (%.1f poäng/dag, ca %d dagar kvar)" % [Data.RESEARCH[rid]["name"], rate, int(left)]
+		_progress_label.text = "In progress: %s   (%.1f points/day, about %d days left)" % [Data.RESEARCH[rid]["name"], rate, int(left)]
 	else:
 		_progress.value = 0
-		_progress_label.text = "Ingen forskning pågår. (%.1f poäng/dag, %d sparade)" % [rate, int(Game.res(p, "forskning"))]
+		_progress_label.text = "No research in progress. (%.1f points/day, %d banked)" % [rate, int(Game.res(p, "forskning"))]
 	var names: Array = []
 	for q in st["research_queue"]:
 		names.append(Data.RESEARCH[q]["name"])
-	_queue_label.text = ("Kö: " + ", ".join(names)) if names.size() > 0 else ""
+	_queue_label.text = ("Queue: " + ", ".join(names)) if names.size() > 0 else ""

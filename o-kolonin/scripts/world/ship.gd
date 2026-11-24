@@ -104,7 +104,7 @@ func gain_xp(v: float) -> void:
 	var before := level()
 	xp += v
 	if level() > before and owner_id == Game.player:
-		Game.say("Besättningen på din %s är nu %s!" % [display_name().to_lower(), Data.XP_LEVELS[level()]["name"].to_lower()], Color(0.7, 0.9, 1))
+		Game.say("The crew of your %s are now %s!" % [display_name().to_lower(), Data.XP_LEVELS[level()]["name"].to_lower()], Color(0.7, 0.9, 1))
 
 
 func fleet_mod(key: String) -> float:

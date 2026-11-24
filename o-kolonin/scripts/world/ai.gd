@@ -225,7 +225,7 @@ func _military() -> void:
 			for s in ready:
 				s.order_attack_island(attack_target)
 			if attack_target.owner_id == Game.player:
-				Game.say("En flotta från %s seglar mot %s!" % [Data.nation_short(nation), attack_target.display_name], Color(1, 0.55, 0.4))
+				Game.say("A fleet from %s is sailing towards %s!" % [Data.nation_short(nation), attack_target.display_name], Color(1, 0.55, 0.4))
 			return
 	# Lediga skepp långt hemifrån seglar hem.
 	for s in idle:

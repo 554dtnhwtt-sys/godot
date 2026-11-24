@@ -34,7 +34,7 @@ func _ready() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 12)
 	margin.add_child(root)
-	var title := UITheme.label("Välj din nation", 38, UITheme.GOLD)
+	var title := UITheme.label("Choose your nation", 38, UITheme.GOLD)
 	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	title.add_theme_constant_override("shadow_offset_y", 2)
 	root.add_child(title)
@@ -76,10 +76,10 @@ func _ready() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bottom.add_child(sp)
-	var back := UITheme.button("Tillbaka", func(): main.show_menu(), 18)
+	var back := UITheme.button("Back", func(): main.show_menu(), 18)
 	back.custom_minimum_size = Vector2(130, 90)
 	bottom.add_child(back)
-	var start := UITheme.button("Börja spela", _start, 24)
+	var start := UITheme.button("Start game", _start, 24)
 	start.custom_minimum_size = Vector2(220, 90)
 	bottom.add_child(start)
 	_select(selected)
@@ -104,8 +104,8 @@ func _card(n: String) -> Button:
 	vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vb.add_child(UITheme.label(def["short"], 19, Data.nation_color(n).lightened(0.45)))
 	vb.add_child(UITheme.label(def["type"], 14, UITheme.DIM))
-	var diff_names := ["Lätt", "Medel", "Svår"]
-	vb.add_child(UITheme.label("Svårighet: %s" % diff_names[def["difficulty"]], 14, UITheme.GOLD))
+	var diff_names := ["Easy", "Medium", "Hard"]
+	vb.add_child(UITheme.label("Difficulty: %s" % diff_names[def["difficulty"]], 14, UITheme.GOLD))
 	hb.add_child(vb)
 	_cards[n] = b
 	return b
@@ -116,19 +116,19 @@ func _settings_box() -> Control:
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 6)
 	panel.add_child(vb)
-	vb.add_child(UITheme.label("Inställningar", 19, UITheme.GOLD))
+	vb.add_child(UITheme.label("Settings", 19, UITheme.GOLD))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	row.add_child(UITheme.label("AI-tempo:", 15))
+	row.add_child(UITheme.label("AI pace:", 15))
 	_tempo = OptionButton.new()
 	_tempo.focus_mode = Control.FOCUS_NONE
 	for k in Data.AI_TEMPO:
 		_tempo.add_item(Data.AI_TEMPO[k]["name"])
 		_tempo.set_item_metadata(_tempo.item_count - 1, k)
 	_tempo.select(1)
-	_tempo.tooltip_text = "Fredlig: ingen förklarar krig de första åren. Normal: efter ca ett år. Aggressiv: från start."
+	_tempo.tooltip_text = "Peaceful: nobody declares war for the first years. Normal: after about a year. Aggressive: from the start."
 	row.add_child(_tempo)
-	row.add_child(UITheme.label("   Kriser börjar:", 15))
+	row.add_child(UITheme.label("   Crises begin:", 15))
 	_timing = OptionButton.new()
 	_timing.focus_mode = Control.FOCUS_NONE
 	for k in Data.CRISIS_TIMING:
@@ -137,7 +137,7 @@ func _settings_box() -> Control:
 	_timing.select(1)
 	row.add_child(_timing)
 	vb.add_child(row)
-	vb.add_child(UITheme.label("Endgame-kriser (flera kan pågå samtidigt):", 15))
+	vb.add_child(UITheme.label("Endgame crises (several can run at once):", 15))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	vb.add_child(grid)
@@ -147,9 +147,9 @@ func _settings_box() -> Control:
 		cb.focus_mode = Control.FOCUS_NONE
 		var name: String = def["name"]
 		if def.get("from_start", false):
-			name += " (finns från start)"
+			name += " (present from the start)"
 		if not def.get("pilot", false):
-			name += " – kommer i betan"
+			name += " – coming in the beta"
 			cb.disabled = true
 			cb.button_pressed = false
 		else:
@@ -186,7 +186,7 @@ func _select(n: String) -> void:
 	hv.add_child(UITheme.label(def["name"], 26, Data.nation_color(n).lightened(0.45)))
 	hv.add_child(UITheme.label(def["type"], 16, UITheme.DIM))
 	hv.add_child(UITheme.label(def["leader"], 16, UITheme.GOLD))
-	hv.add_child(UITheme.label("Hemö: " + Data.island_def(def["home"])["name"], 15, UITheme.DIM))
+	hv.add_child(UITheme.label("Home island: " + Data.island_def(def["home"])["name"], 15, UITheme.DIM))
 	head.add_child(hv)
 	_detail.add_child(head)
 	_detail.add_child(HSeparator.new())
@@ -194,16 +194,16 @@ func _select(n: String) -> void:
 	lore.custom_minimum_size.x = 520
 	_detail.add_child(lore)
 	_detail.add_child(HSeparator.new())
-	_detail.add_child(UITheme.label("Styrkor", 18, UITheme.GOOD))
+	_detail.add_child(UITheme.label("Strengths", 18, UITheme.GOOD))
 	for s in def["strengths"]:
 		_detail.add_child(UITheme.wrap_label("+  " + s, 15, UITheme.GOOD))
-	_detail.add_child(UITheme.label("Svagheter", 18, UITheme.BAD))
+	_detail.add_child(UITheme.label("Weaknesses", 18, UITheme.BAD))
 	for s in def["weaknesses"]:
 		_detail.add_child(UITheme.wrap_label("–  " + s, 15, UITheme.BAD))
 	var ships: Array = []
 	for s in def["start_ships"]:
 		ships.append(Data.SHIPS[s]["name"])
-	_detail.add_child(UITheme.wrap_label("Startflotta: " + ", ".join(ships), 15, UITheme.DIM))
+	_detail.add_child(UITheme.wrap_label("Starting fleet: " + ", ".join(ships), 15, UITheme.DIM))
 	_map.queue_redraw()
 
 
@@ -264,8 +264,8 @@ func _draw_map() -> void:
 			_map.draw_string(font, c + Vector2(-60, -r - 10), label, HORIZONTAL_ALIGNMENT_CENTER, 120, 15, Color(1, 1, 1))
 		elif d.get("guardians", false):
 			_map.draw_string(font, c + Vector2(-60, -r - 8), "?", HORIZONTAL_ALIGNMENT_CENTER, 120, 16, Color(0.8, 0.95, 1))
-	_map.draw_string(font, off + Vector2(12, 24), Data.SEA_NAME, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.7))
-	_map.draw_string(font, off + Vector2(12, Data.WORLD_SIZE.y * sc - 12), "Dimman döljer allt utom din hemö när spelet börjar.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.6))
+	_map.draw_string(font, off + Vector2(12, 24), Data.SEA_NAME.capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.7))
+	_map.draw_string(font, off + Vector2(12, Data.WORLD_SIZE.y * sc - 12), "The fog hides everything but your home island when the game begins.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.6))
 
 
 func _ellipse(c: Vector2, rx: float, ry: float, col: Color) -> void:

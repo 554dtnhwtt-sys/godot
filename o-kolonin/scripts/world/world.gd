@@ -15,7 +15,7 @@ const GovernorScript = preload("res://scripts/world/governor.gd")
 const Governor = GovernorScript
 
 ## Flottans formation när skepp får en förflyttningsorder: linje, kil, spridd.
-const FORMATIONS := {"linje": "Linje", "kil": "Kil", "spridd": "Spridd"}
+const FORMATIONS := {"linje": "Line", "kil": "Wedge", "spridd": "Spread"}
 
 signal selection_changed
 signal ended(winner: String)
@@ -101,7 +101,7 @@ func _ready() -> void:
 	add_child(hud)
 	_update_vision()
 	Game.set_speed(0)
-	Game.say("Välkommen till %s, %s. Året är %d." % [Data.SEA_NAME, Data.NATIONS[Game.player]["leader"], Data.START_YEAR], Data.nation_accent(Game.player))
+	Game.say("Welcome to %s, %s. The year is %d." % [Data.SEA_NAME, Data.NATIONS[Game.player]["leader"], Data.START_YEAR], Data.nation_accent(Game.player))
 
 
 func _setup_nations() -> void:
@@ -284,7 +284,7 @@ func try_colonize(ship, isl) -> void:
 	var cost := Game.colonize_cost(n)
 	if not Game.pay_at(n, home_island(n), cost):
 		if n == Game.player:
-			Game.say("Inte råd att kolonisera %s (kräver %s)." % [isl.display_name, Data.cost_text(cost)], Color(1, 0.6, 0.5))
+			Game.say("Cannot afford to colonize %s (requires %s)." % [isl.display_name, Data.cost_text(cost)], Color(1, 0.6, 0.5))
 		return
 	isl.set_owner_id(n)
 	isl.add_building("radhus", true)
@@ -295,16 +295,16 @@ func try_colonize(ship, isl) -> void:
 	for g in ship.cargo:
 		isl.add_good(g, ship.cargo[g])
 	ship.cargo = {}
-	fx.text(isl.position, "Koloniserad!", Data.nation_color(n).lightened(0.4))
+	fx.text(isl.position, "Colonized!", Data.nation_color(n).lightened(0.4))
 	if n == Game.player:
-		Game.say("%s är nu din koloni! Bygg en handelsrutt dit för full produktion." % isl.display_name, Color(0.6, 1, 0.7))
+		Game.say("%s is now your colony! Send a merchant ship there to keep it supplied." % isl.display_name, Color(0.6, 1, 0.7))
 	else:
-		Game.say("%s har koloniserat %s." % [Data.nation_short(n), isl.display_name], Color(0.8, 0.8, 0.75))
+		Game.say("%s has colonized %s." % [Data.nation_short(n), isl.display_name], Color(0.8, 0.8, 0.75))
 	# Väktarna ogillar nybyggare nära Solstensön.
 	var sol = island_by_id("solstenson")
 	if sol != null and sol.owner_id == "vaktarna" and isl.position.distance_to(sol.position) < 1000.0:
 		Game.vaktarna_angry[n] = true
-		Game.say("De Sovande Väktarna har märkt att %s byggt nära Solstensön. De är nu fientliga mot dem!" % Data.nation_short(n), Data.HOSTILE_FACTIONS["vaktarna"]["color"])
+		Game.say("The Sleeping Wardens have noticed that %s has settled near Sunstone Isle. They are now hostile to them!" % Data.nation_short(n), Data.HOSTILE_FACTIONS["vaktarna"]["color"])
 
 
 func land_troops(ship, isl) -> void:
@@ -313,7 +313,7 @@ func land_troops(ship, isl) -> void:
 	var power: float = ship.troops * ship.fleet_mod("troops")
 	ship.troops = 0.0
 	isl.last_attacked = Game.time
-	fx.text(isl.coast_point_towards(ship.position, -40.0), "Landstigning!", Color(1, 0.85, 0.5))
+	fx.text(isl.coast_point_towards(ship.position, -40.0), "Landing!", Color(1, 0.85, 0.5))
 	if power > isl.garrison:
 		capture_island(isl, ship.owner_id, power - isl.garrison)
 	else:
@@ -330,15 +330,15 @@ func capture_island(isl, new_owner: String, garrison: float) -> void:
 		if b.built:
 			b.hp = maxf(b.hp, b.max_hp * 0.3)
 	if new_owner == Game.player:
-		Game.say("Du har erövrat %s från %s!" % [isl.display_name, Data.nation_short(old)], Color(0.6, 1, 0.6))
+		Game.say("You have conquered %s from %s!" % [isl.display_name, Data.nation_short(old)], Color(0.6, 1, 0.6))
 	elif old == Game.player:
-		Game.say("%s har erövrat %s från dig!" % [Data.nation_short(new_owner), isl.display_name], Color(1, 0.45, 0.4))
+		Game.say("%s has conquered %s from you!" % [Data.nation_short(new_owner), isl.display_name], Color(1, 0.45, 0.4))
 	else:
-		Game.say("%s har erövrat %s från %s." % [Data.nation_short(new_owner), isl.display_name, Data.nation_short(old)], Color(0.85, 0.8, 0.7))
+		Game.say("%s has conquered %s from %s." % [Data.nation_short(new_owner), isl.display_name, Data.nation_short(old)], Color(0.85, 0.8, 0.7))
 	if Game.is_playable(old) and Game.is_playable(new_owner):
 		Game.change_relation(old, new_owner, -20.0)
 	if old == "vaktarna":
-		Game.say("Solstensöns uråldriga kristaller tillhör nu %s." % Data.nation_short(new_owner), Data.HOSTILE_FACTIONS["vaktarna"]["color"])
+		Game.say("The ancient crystals of Sunstone Isle now belong to %s." % Data.nation_short(new_owner), Data.HOSTILE_FACTIONS["vaktarna"]["color"])
 	_check_elimination()
 
 
@@ -364,9 +364,9 @@ func trade_arrival(ship, isl) -> void:
 	Game.add_res(n, "guld", gold)
 	if n == Game.player:
 		if delivered >= 1.0:
-			fx.text(isl.position + Vector2(0, -40), "+%d varor levererade" % int(delivered), Color(1, 0.9, 0.6))
+			fx.text(isl.position + Vector2(0, -40), "+%d goods delivered" % int(delivered), Color(1, 0.9, 0.6))
 		if not was and isl.home_of != n:
-			Game.say("Handelsrutten till %s är igång." % isl.display_name, Color(1, 0.85, 0.4))
+			Game.say("The trade route to %s is running." % isl.display_name, Color(1, 0.85, 0.4))
 
 
 ## Hur mycket en ö vill behålla av en vara innan den skickar bort överskott.
@@ -427,13 +427,13 @@ func on_ship_sunk(ship, attacker: String, src = null) -> void:
 					src.cargo[g] = src.cargo.get(g, 0.0) + take
 					got += take
 		if attacker == Game.player:
-			fx.text(ship.position, "+%d guld (plundring)%s" % [int(loot), (" +%d last" % int(got)) if got >= 1.0 else ""], Data.RESOURCE_COLORS["guld"])
+			fx.text(ship.position, "+%d gold (plunder)%s" % [int(loot), (" +%d cargo" % int(got)) if got >= 1.0 else ""], Data.RESOURCE_COLORS["guld"])
 	if ship.admiral != null:
 		_admiral_lost(ship)
 	if ship.owner_id == Game.player:
-		Game.say("Din %s har sjunkit!" % ship.display_name().to_lower(), Color(1, 0.5, 0.45))
+		Game.say("Your %s has sunk!" % ship.display_name().to_lower(), Color(1, 0.5, 0.45))
 	elif attacker == Game.player:
-		Game.say("Ni sänkte %ss %s." % [Data.nation_short(ship.owner_id), ship.display_name().to_lower()], Color(0.7, 1, 0.7))
+		Game.say("You sank %s's %s." % [Data.nation_short(ship.owner_id), ship.display_name().to_lower()], Color(0.7, 1, 0.7))
 	if events:
 		events.on_ship_sunk(ship)
 	selection_changed.emit()
@@ -467,7 +467,7 @@ func recruit_admiral(ship) -> bool:
 	var used: Array = []
 	for a in Game.nations[n]["admirals"]:
 		used.append(a["name"])
-	var names: Array = Data.ADMIRAL_NAMES.get(n, ["Kapten Okänd"]).duplicate()
+	var names: Array = Data.ADMIRAL_NAMES.get(n, ["Captain Unknown"]).duplicate()
 	names.shuffle()
 	var name: String = names[0]
 	for nm in names:
@@ -483,7 +483,7 @@ func recruit_admiral(ship) -> bool:
 		var tn: Array = []
 		for t in adm["traits"]:
 			tn.append(Data.ADMIRAL_TRAITS[t]["name"])
-		Game.say("%s (%s) tar befälet över flottan." % [name, ", ".join(tn)], Color(1, 0.9, 0.6))
+		Game.say("%s (%s) takes command of the fleet." % [name, ", ".join(tn)], Color(1, 0.9, 0.6))
 	Game.resources_changed.emit()
 	return true
 
@@ -504,11 +504,11 @@ func _admiral_lost(ship) -> void:
 	if randf() < 0.6:
 		adm["assigned"] = false
 		if ship.owner_id == Game.player:
-			Game.say("%s räddade sig i en jolle och väntar på ett nytt skepp." % adm["name"], Color(1, 0.85, 0.6))
+			Game.say("%s escaped in a jolly boat and awaits a new ship." % adm["name"], Color(1, 0.85, 0.6))
 	else:
 		Game.nations[ship.owner_id]["admirals"].erase(adm)
 		if ship.owner_id == Game.player:
-			Game.say("%s gick under med sitt skepp." % adm["name"], Color(1, 0.5, 0.45))
+			Game.say("%s went down with the ship." % adm["name"], Color(1, 0.5, 0.45))
 
 
 ## Ön med skeppsvarv där skeppet kan uppgraderas (måste ligga nära), annars null.
@@ -529,7 +529,7 @@ func upgrade_ship(ship, key: String) -> bool:
 		return false
 	ship.apply_upgrade(key)
 	if ship.owner_id == Game.player:
-		Game.say("%s: %s på %s." % [Data.UPGRADES[key]["name"], ship.display_name().to_lower(), isl.display_name], Color(0.7, 0.9, 1))
+		Game.say("%s: %s at %s." % [Data.UPGRADES[key]["name"], ship.display_name().to_lower(), isl.display_name], Color(0.7, 0.9, 1))
 	return true
 
 
@@ -548,11 +548,11 @@ func _check_elimination() -> void:
 			for s in ships_of(n):
 				s.take_damage(99999.0, "")
 			if n == Game.player:
-				Game.say("Din nation har fallit. Du kan fortsätta titta på eller starta ett nytt spel.", Color(1, 0.4, 0.4))
+				Game.say("Your nation has fallen. You can keep watching or start a new game.", Color(1, 0.4, 0.4))
 				if hud:
-					hud.show_message_popup("Nationen har fallit", "Alla dina öar är förlorade. %s är inte längre en makt i Smaragdhavet." % Data.nation_name(Game.player))
+					hud.show_message_popup("Your nation has fallen", "All your islands are lost. %s is no longer a power in the Emerald Sea." % Data.nation_name(Game.player))
 			else:
-				Game.say("%s har fallit och är inte längre en makt i Smaragdhavet." % Data.nation_name(n), Color(1, 0.8, 0.4))
+				Game.say("%s has fallen and is no longer a power in the Emerald Sea." % Data.nation_name(n), Color(1, 0.8, 0.4))
 
 
 # ------------------------------------------------------------------ Uppdatering
@@ -619,14 +619,14 @@ func _economy_day() -> void:
 			if isl.population < housing:
 				isl.population = minf(housing, isl.population + maxf(0.4, housing * 0.025))
 			if isl.starving and n == Game.player:
-				Game.say("Invånarna på %s har mat igen." % isl.display_name, Color(0.7, 1, 0.7))
+				Game.say("The people of %s have food again." % isl.display_name, Color(0.7, 1, 0.7))
 			isl.starving = false
 		else:
 			isl.add_good("mat", -food_have)
 			ir["mat"] = -food_have
 			isl.population = maxf(0.0, isl.population - maxf(0.5, isl.population * 0.03))
 			if not isl.starving and n == Game.player:
-				Game.say("Svält på %s! Invånarna flyttar. Bygg kokosodlingar eller fiskehyddor, eller frakta dit mat." % isl.display_name, Color(1, 0.55, 0.45))
+				Game.say("Famine on %s! People are leaving. Build coconut groves or fishing huts, or ship food there." % isl.display_name, Color(1, 0.55, 0.45))
 			isl.starving = true
 		if isl.population > housing:
 			isl.population = maxf(housing, isl.population - 1.0)
@@ -682,14 +682,14 @@ func _economy_day() -> void:
 				var at: Vector2 = isl.coast_point_towards(yard.global_position + (yard.global_position - isl.position) * 2.0, 40.0)
 				var s = spawn_ship(q["type"], n, at)
 				if n == Game.player:
-					Game.say("En ny %s har sjösatts på %s." % [s.display_name().to_lower(), isl.display_name], Color(0.6, 0.85, 1))
+					Game.say("A new %s has been launched at %s." % [s.display_name().to_lower(), isl.display_name], Color(0.6, 0.85, 1))
 				elif ais.has(n):
 					ais[n].on_ship_built(s)
 		# Guvernören bygger på spelarens öar
 		if n == Game.player and isl.governor and Game.day() % 3 == 0:
 			var t: String = GovernorScript.choose(n, isl, self, isl.governor_focus, 120.0)
 			if t != "" and build(n, isl, t):
-				Game.say("Guvernören på %s bygger %s." % [isl.display_name, Data.BUILDINGS[t]["name"].to_lower()], Color(0.8, 0.85, 0.75))
+				Game.say("The governor of %s is building a %s." % [isl.display_name, Data.BUILDINGS[t]["name"].to_lower()], Color(0.8, 0.85, 0.75))
 	# Handelsavtal mellan nationer
 	for k in Game.relations:
 		var rel: Dictionary = Game.relations[k]
@@ -887,7 +887,7 @@ func _right_click(wp: Vector2) -> void:
 				s.order_attack(target)
 			_marker(target.position, Color(1, 0.3, 0.25))
 		else:
-			Game.say("Ni är inte i krig med %s. Förklara krig i Diplomati-fönstret (D)." % Data.nation_short(target.owner_id), Color(1, 0.8, 0.5))
+			Game.say("You are not at war with %s. Declare war in the Diplomacy window (P)." % Data.nation_short(target.owner_id), Color(1, 0.8, 0.5))
 		return
 	var isl = island_at(wp)
 	if isl != null:
@@ -895,14 +895,14 @@ func _right_click(wp: Vector2) -> void:
 			_order_own_island(isl)
 		elif isl.owner_id == "neutral":
 			if isl.guardians:
-				Game.say("Solstensön är helig mark. Ingen kan kolonisera den.", Color(1, 0.8, 0.5))
+				Game.say("Sunstone Isle is sacred ground. No one can colonize it.", Color(1, 0.8, 0.5))
 				return
 			var cs = _best_colonizer()
 			cs.order_colonize(isl)
 			for s in selected_ships:
 				if s != cs:
 					s.order_move(isl.coast_point_towards(s.position, 120.0))
-			Game.say("Skickar %s för att kolonisera %s (kostar %s)." % [cs.display_name().to_lower(), isl.display_name, Data.cost_text(Game.colonize_cost(p))], Color(0.8, 0.95, 0.8))
+			Game.say("Sending the %s to colonize %s (costs %s)." % [cs.display_name().to_lower(), isl.display_name, Data.cost_text(Game.colonize_cost(p))], Color(0.8, 0.95, 0.8))
 			_marker(isl.position, Color(0.5, 1, 0.6))
 		elif isl.owner_id == "vaktarna" and not Game.at_war(p, "vaktarna"):
 			_provoke_vaktarna(p)
@@ -913,11 +913,11 @@ func _right_click(wp: Vector2) -> void:
 			for s in selected_ships:
 				s.order_attack_island(isl)
 			_marker(isl.position, Color(1, 0.3, 0.25))
-			Game.say("Anfall mot %s! Skeppen skjuter sönder försvaret och landstiger sedan." % isl.display_name, Color(1, 0.75, 0.5))
+			Game.say("Attack on %s! The ships will destroy the defenses and then land troops." % isl.display_name, Color(1, 0.75, 0.5))
 		else:
 			for s in selected_ships:
 				s.order_move(isl.coast_point_towards(s.position, 120.0))
-			Game.say("Ni är inte i krig med %s." % Data.nation_short(isl.owner_id), Color(1, 0.8, 0.5))
+			Game.say("You are not at war with %s." % Data.nation_short(isl.owner_id), Color(1, 0.8, 0.5))
 		return
 	# Vatten: förflyttning i formation
 	order_formation_move(selected_ships, wp)
@@ -967,7 +967,7 @@ func _order_own_island(isl) -> void:
 			var start = nearest_own_island(Game.player, s.position, 500.0)
 			if start != null and start != isl:
 				start_trade(s, start, isl)
-				Game.say("Handelsrutt: %s ⇄ %s" % [start.display_name, isl.display_name], Color(1, 0.85, 0.4))
+				Game.say("Trade route: %s <-> %s" % [start.display_name, isl.display_name], Color(1, 0.85, 0.4))
 				continue
 		s.order_move(isl.coast_point_towards(s.position, 90.0))
 	_marker(isl.position, Color(0.6, 0.85, 1))
@@ -984,7 +984,7 @@ func _best_colonizer():
 func _provoke_vaktarna(p: String) -> void:
 	if not Game.vaktarna_angry.has(p):
 		Game.vaktarna_angry[p] = true
-		Game.say("Du har väckt De Sovande Väktarnas vrede!", Data.HOSTILE_FACTIONS["vaktarna"]["color"])
+		Game.say("You have awoken the wrath of the Sleeping Wardens!", Data.HOSTILE_FACTIONS["vaktarna"]["color"])
 
 
 func _marker(p: Vector2, c: Color) -> void:

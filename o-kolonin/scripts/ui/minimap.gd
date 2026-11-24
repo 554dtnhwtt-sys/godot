@@ -19,7 +19,7 @@ func _ready() -> void:
 	offset_top = -h - 14
 	offset_bottom = -14
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	tooltip_text = "Minikarta – klicka för att flytta kameran"
+	tooltip_text = "Minimap – click to move the camera, right-click to send selected ships"
 
 
 func _process(_delta: float) -> void:

@@ -55,3 +55,6 @@
 | Befolkning och arbetare? | Ja, enkel befolkning |
 | Varor mellan öarna? | Eget lager per ö |
 | Hur ska flottor utvecklas? | Erfarna besättningar, amiraler, uppgraderingar på varvet |
+
+## 8. Språk
+> Engelska ska spelet vara

@@ -29,14 +29,14 @@ func _storm_tick() -> void:
 		storm_left -= 1
 		Game.storm = minf(1.0, Game.storm + 0.2)
 		if storm_left == 0:
-			Game.say("Stormen har bedarrat.", Color(0.8, 0.9, 1))
+			Game.say("The storm has passed.", Color(0.8, 0.9, 1))
 	else:
 		Game.storm = maxf(0.0, Game.storm - 0.15)
 
 
 func start_storm(days: int) -> void:
 	storm_left = days
-	Game.say("En storm drar in över Smaragdhavet! Skepp till sjöss tar skada – sök skydd vid egna öar.", Color(0.7, 0.8, 1))
+	Game.say("A storm is sweeping over the Emerald Sea! Ships at sea take damage – seek shelter at your own islands.", Color(0.7, 0.8, 1))
 
 
 # ------------------------------------------------------------------ Händelser
@@ -55,11 +55,11 @@ func _random_event() -> void:
 		"fiske":
 			var amount := 60.0 + Game.time * 0.1
 			Game.add_res(Game.player, "mat", amount)
-			Game.say("Fiskestimmarna är ovanligt stora i år. +%d mat." % int(amount), Data.RESOURCE_COLORS["mat"])
+			Game.say("The fish shoals are unusually large this year. +%d food." % int(amount), Data.RESOURCE_COLORS["mat"])
 		"skeppsbrutna":
 			var gold := 50.0 + randi() % 80
 			Game.add_res(Game.player, "guld", gold)
-			Game.say("Skeppsbrutna sjömän räddas av dina fiskare. De betalar med %d guld ur en räddad kista." % int(gold), Data.RESOURCE_COLORS["guld"])
+			Game.say("Your fishermen rescue shipwrecked sailors. They pay with %d gold from a salvaged chest." % int(gold), Data.RESOURCE_COLORS["guld"])
 
 
 func _pirate_raid() -> void:
@@ -88,11 +88,11 @@ func _pirate_raid() -> void:
 		var s = world.spawn_ship(t, "vildpirater", spawn + Vector2(i * 60, (i % 2) * 50))
 		s.order_attack_island(target)
 	if tn == Game.player:
-		Game.say("Pirater har siktats! %d skepp seglar mot %s." % [count, target.display_name], Color(1, 0.5, 0.4))
+		Game.say("Pirates sighted! %d ships are sailing towards %s." % [count, target.display_name], Color(1, 0.5, 0.4))
 		if world.hud:
-			world.hud.show_message_popup("Pirater!", "Utkiken ropar från masttoppen: svarta segel vid horisonten! %d piratskepp är på väg mot %s.\n\nSamla dina skepp och bygg kanonbatterier." % [count, target.display_name])
+			world.hud.show_message_popup("Pirates!", "The lookout shouts from the masthead: black sails on the horizon! %d pirate ships are heading for %s.\n\nGather your ships and build cannon batteries." % [count, target.display_name])
 	else:
-		Game.say("Pirater härjar kring %s (%s)." % [target.display_name, Data.nation_short(tn)], Color(0.85, 0.75, 0.65))
+		Game.say("Pirates are raiding around %s (%s)." % [target.display_name, Data.nation_short(tn)], Color(0.85, 0.75, 0.65))
 
 
 func _edge_point_near(p: Vector2) -> Vector2:
@@ -114,13 +114,13 @@ func _edge_point_near(p: Vector2) -> Vector2:
 func _merchant() -> void:
 	var p := Game.player
 	var offers := [
-		{"text": "Köp 25 kristaller för 220 guld", "cost": {"guld": 220.0}, "gain": {"kristaller": 25.0}},
-		{"text": "Sälj 20 kryddor för 220 guld", "cost": {"kryddor": 20.0}, "gain": {"guld": 220.0}},
-		{"text": "Sälj 10 pärlor för 240 guld", "cost": {"parlor": 10.0}, "gain": {"guld": 240.0}},
-		{"text": "Köp 30 rom för 120 guld", "cost": {"guld": 120.0}, "gain": {"rom": 30.0}},
-		{"text": "Köp 150 trä och 80 sten för 180 guld", "cost": {"guld": 180.0}, "gain": {"tra": 150.0, "sten": 80.0}},
-		{"text": "Köp ritningar: slutför din pågående forskning (300 guld)", "cost": {"guld": 300.0}, "gain": {}, "research": true},
-		{"text": "Köp en sjökarta som skingrar dimman (150 guld)", "cost": {"guld": 150.0}, "gain": {}, "map": true},
+		{"text": "Buy 25 crystals for 220 gold", "cost": {"guld": 220.0}, "gain": {"kristaller": 25.0}},
+		{"text": "Sell 20 spices for 220 gold", "cost": {"kryddor": 20.0}, "gain": {"guld": 220.0}},
+		{"text": "Sell 10 pearls for 240 gold", "cost": {"parlor": 10.0}, "gain": {"guld": 240.0}},
+		{"text": "Buy 30 rum for 120 gold", "cost": {"guld": 120.0}, "gain": {"rom": 30.0}},
+		{"text": "Buy 150 wood and 80 stone for 180 gold", "cost": {"guld": 180.0}, "gain": {"tra": 150.0, "sten": 80.0}},
+		{"text": "Buy blueprints: finish your current research (300 gold)", "cost": {"guld": 300.0}, "gain": {}, "research": true},
+		{"text": "Buy a sea chart that clears the fog (150 gold)", "cost": {"guld": 150.0}, "gain": {}, "map": true},
 	]
 	offers.shuffle()
 	var buttons: Array = []
@@ -130,11 +130,11 @@ func _merchant() -> void:
 		if o.get("research", false) and Game.nations[p]["current_research"] == "":
 			ok = false
 		buttons.append({"text": o["text"], "disabled": not ok, "cb": _merchant_buy.bind(o)})
-	buttons.append({"text": "Nej tack", "cb": Callable()})
+	buttons.append({"text": "No thanks", "cb": Callable()})
 	if world.hud:
 		world.hud.show_popup({
-			"title": "En handelsman anländer",
-			"text": "Ett främmande handelsfartyg med silkessegel ankrar vid din hamn. Kaptenen, en solbränd man med guldtänder, bjuder ut sina varor:\n\n\"Bara idag, min vän – och bara för dig!\"",
+			"title": "A merchant arrives",
+			"text": "A foreign merchant ship with silk sails drops anchor in your harbour. The captain, a sunburnt man with gold teeth, offers his wares:\n\n\"Today only, my friend – and only for you!\"",
 			"buttons": buttons,
 		})
 
@@ -154,11 +154,11 @@ func _merchant_buy(o: Dictionary) -> void:
 		for isl in world.islands:
 			if not world.fog.is_explored(isl.position):
 				world.fog.reveal(isl.position, isl.radius + 400.0)
-				Game.say("Sjökartan visar vägen till %s." % isl.display_name, Color(0.8, 0.9, 1))
+				Game.say("The sea chart reveals the way to %s." % isl.display_name, Color(0.8, 0.9, 1))
 				break
 		world.fog.commit()
 	Game.resources_changed.emit()
-	Game.say("Affären är klar.", Color(1, 0.85, 0.4))
+	Game.say("The deal is done.", Color(1, 0.85, 0.4))
 
 
 # ------------------------------------------------------------------ Kriser
@@ -174,9 +174,9 @@ func _crises(d: int) -> void:
 		if not Game.active_crises.has("spokflottan") and Game.time >= start:
 			Game.active_crises["spokflottan"] = true
 			ghost_next = d + 10
-			Game.say("Dimman tätnar och havet blir kallt. Spökflottan har vaknat!", Data.HOSTILE_FACTIONS["spokflottan"]["color"])
+			Game.say("The fog thickens and the sea turns cold. The Ghost Fleet has awoken!", Data.HOSTILE_FACTIONS["spokflottan"]["color"])
 			if world.hud:
-				world.hud.show_message_popup("Spökflottan", Data.CRISES["spokflottan"]["desc"] + "\n\nSpökflottan anfaller i %d vågor. Alla nationer är i fara – kanske är det dags att glömma gamla fejder?" % GHOST_WAVES)
+				world.hud.show_message_popup("The Ghost Fleet", Data.CRISES["spokflottan"]["desc"] + "\n\nThe Ghost Fleet attacks in %d waves. Every nation is in danger – perhaps it is time to forget old feuds?" % GHOST_WAVES)
 		if Game.active_crises.has("spokflottan") and ghost_next >= 0 and d >= ghost_next:
 			if ghost_waves_sent < GHOST_WAVES:
 				_ghost_wave()
@@ -185,23 +185,23 @@ func _crises(d: int) -> void:
 			elif world.ships_of("spokflottan").is_empty():
 				ghost_done = true
 				ghost_next = -1
-				Game.say("Den sista spökbesättningen har fått ro. Spökflottan är besegrad!", Color(1, 0.9, 0.6))
+				Game.say("The last ghostly crew has found peace. The Ghost Fleet is defeated!", Color(1, 0.9, 0.6))
 				if world.hud:
-					world.hud.show_message_popup("Spökflottan är besegrad", "Dimman lättar och solen bryter igenom. De döda sjömännen har äntligen fått ro, och Smaragdhavet andas ut.")
+					world.hud.show_message_popup("The Ghost Fleet is defeated", "The fog lifts and the sun breaks through. The dead sailors have finally found peace, and the Emerald Sea breathes again.")
 	# De Sovande Väktarna vaknar
 	if crises.get("vaktarna", false) and not Game.vaktarna_awake:
 		var sol = world.island_by_id("solstenson")
 		if sol != null and sol.owner_id == "vaktarna" and Game.time >= start * 1.2:
 			Game.vaktarna_awake = true
 			vaktarna_next = d + 5
-			Game.say("Solstensön lyser upp natthimlen. De Sovande Väktarna har vaknat!", Data.HOSTILE_FACTIONS["vaktarna"]["color"])
+			Game.say("Sunstone Isle lights up the night sky. The Sleeping Wardens have awoken!", Data.HOSTILE_FACTIONS["vaktarna"]["color"])
 			if world.hud:
-				world.hud.show_message_popup("Väktarna vaknar", "Ett skarpt ljus stiger ur Solstensöns kristaller. De uråldriga Väktarna har vaknat ur sin sömn och ser alla främlingar som inkräktare.\n\nErövra Solstensön för att stoppa dem.")
+				world.hud.show_message_popup("The Wardens awaken", "A piercing light rises from the crystals of Sunstone Isle. The ancient Wardens have woken from their slumber and see all strangers as intruders.\n\nConquer Sunstone Isle to stop them.")
 	if Game.vaktarna_awake and vaktarna_next >= 0 and d >= vaktarna_next:
 		var sol = world.island_by_id("solstenson")
 		if sol == null or sol.owner_id != "vaktarna":
 			vaktarna_next = -1
-			Game.say("Väktarnas kristaller har slocknat. Hotet från Solstensön är över.", Color(1, 0.9, 0.6))
+			Game.say("The Wardens' crystals have gone dark. The threat from Sunstone Isle is over.", Color(1, 0.9, 0.6))
 		else:
 			vaktarna_next = d + 70
 			if world.ships_of("vaktarna").size() < 8:
@@ -216,7 +216,7 @@ func _ghost_wave() -> void:
 	var spawn: Vector2 = edges[randi() % edges.size()]
 	for i in count:
 		world.spawn_ship("spokskepp", "spokflottan", spawn + Vector2((i % 3) * 70, (i / 3) * 70))
-	Game.say("Spökflottans våg %d/%d (%d skepp) stiger ur dimman!" % [ghost_waves_sent + 1, GHOST_WAVES, count], Data.HOSTILE_FACTIONS["spokflottan"]["color"])
+	Game.say("Ghost Fleet wave %d/%d (%d ships) rises from the fog!" % [ghost_waves_sent + 1, GHOST_WAVES, count], Data.HOSTILE_FACTIONS["spokflottan"]["color"])
 
 
 func on_ship_sunk(_ship) -> void:

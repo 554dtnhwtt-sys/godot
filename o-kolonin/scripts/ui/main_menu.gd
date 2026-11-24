@@ -39,7 +39,7 @@ func _ready() -> void:
 	vb.add_theme_constant_override("separation", 14)
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER
 	panel.add_child(vb)
-	var title := UITheme.label("Ö-KOLONIN", 66, UITheme.GOLD)
+	var title := UITheme.label("ISLAND COLONY", 66, UITheme.GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
 	title.add_theme_constant_override("shadow_offset_x", 3)
@@ -47,15 +47,15 @@ func _ready() -> void:
 	title.add_theme_color_override("font_outline_color", Color(0.25, 0.12, 0.02))
 	title.add_theme_constant_override("outline_size", 6)
 	vb.add_child(title)
-	var sub := UITheme.label("Segel, socker och krut i %s" % Data.SEA_NAME, 19, UITheme.TEXT)
+	var sub := UITheme.label("Sails, sugar and gunpowder in %s" % Data.SEA_NAME, 19, UITheme.TEXT)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(sub)
 	vb.add_child(HSeparator.new())
-	for b in [["Nytt spel", _new_game], ["Hjälp", _help], ["Avsluta", func(): get_tree().quit()]]:
+	for b in [["New game", _new_game], ["Help", _help], ["Quit", func(): get_tree().quit()]]:
 		var btn := UITheme.button(b[0], b[1], 22)
 		btn.custom_minimum_size = Vector2(0, 54)
 		vb.add_child(btn)
-	var ver := UITheme.label("Pilotversion 0.3", 13, UITheme.DIM)
+	var ver := UITheme.label("Pilot version 0.4", 13, UITheme.DIM)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(ver)
 
@@ -89,7 +89,7 @@ func _new_game() -> void:
 
 func _help() -> void:
 	var d := AcceptDialog.new()
-	d.title = "Om spelet"
-	d.dialog_text = "Du strandar i Smaragdhavet år 1680 som ledare för en av fyra nationer.\nBygg upp din ö, forska fram nya byggnader, perks och skeppsmodeller,\nkolonisera nya öar och strid till sjöss med segelskepp.\n\nDet finns inget slut – det är en sandlåda. Slå på endgame-kriser\nom du vill ha ett hot som enar (eller krossar) alla nationer.\n\nTryck F1 i spelet för alla kontroller."
+	d.title = "About the game"
+	d.dialog_text = "You arrive in the Emerald Sea in the year 1680 as the leader of one of four nations.\nBuild up your island, research new buildings, perks and ship designs,\ncolonize new islands and fight at sea with sailing ships.\n\nThere is no ending – it is a sandbox. Turn on the endgame crises\nif you want a threat that unites (or crushes) every nation.\n\nPress F1 in the game for all controls."
 	add_child(d)
 	d.popup_centered()

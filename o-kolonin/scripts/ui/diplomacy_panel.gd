@@ -30,13 +30,13 @@ func rebuild() -> void:
 		c.queue_free()
 	_rows.clear()
 	var head := HBoxContainer.new()
-	head.add_child(UITheme.label("Diplomati", 26, UITheme.GOLD))
+	head.add_child(UITheme.label("Diplomacy", 26, UITheme.GOLD))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
-	head.add_child(UITheme.button("Stäng (P)", func(): visible = false, 15))
+	head.add_child(UITheme.button("Close (P)", func(): visible = false, 15))
 	_content.add_child(head)
-	_result = UITheme.wrap_label("Välj en åtgärd. Relationen avgör vad de andra nationerna går med på – handel och allianser kräver förtroende, tribut kräver att du är mycket starkare.", 14, UITheme.DIM)
+	_result = UITheme.wrap_label("Choose an action. Relations decide what the other nations will agree to – trade and alliances require trust, tribute requires you to be much stronger.", 14, UITheme.DIM)
 	_content.add_child(_result)
 	var p := Game.player
 	for n in Data.PLAYABLE:
@@ -83,16 +83,16 @@ func _nation_row(n: String) -> Control:
 	grid.add_theme_constant_override("v_separation", 6)
 	var buttons := {}
 	var actions := [
-		["krig", "Förklara krig"], ["fred", "Föreslå fred"], ["handel", "Handelsavtal"], ["allians", "Allians"],
-		["bryt", "Bryt avtal"], ["gava", "Gåva (100 guld)"], ["lyxgava", "Lyxgåva"], ["tribut", "Kräv tribut"],
+		["krig", "Declare war"], ["fred", "Propose peace"], ["handel", "Trade agreement"], ["allians", "Alliance"],
+		["bryt", "Break agreement"], ["gava", "Gift (100 gold)"], ["lyxgava", "Luxury gift"], ["tribut", "Demand tribute"],
 	]
 	for a in actions:
 		var b := UITheme.button(a[1], _act.bind(a[0], n), 14)
 		b.custom_minimum_size = Vector2(150, 32)
 		grid.add_child(b)
 		buttons[a[0]] = b
-	buttons["lyxgava"].tooltip_text = "20 kryddor och 10 pärlor – ger mycket bättre relation än guld."
-	buttons["tribut"].tooltip_text = "Kräv 30 % av deras guld. Kräver att du är minst 60 % starkare."
+	buttons["lyxgava"].tooltip_text = "20 spices and 10 pearls – improves relations far more than gold."
+	buttons["tribut"].tooltip_text = "Demand 30% of their gold. Requires you to be at least 60% stronger."
 	var jw := HBoxContainer.new()
 	var ob := OptionButton.new()
 	ob.focus_mode = Control.FOCUS_NONE
@@ -102,9 +102,9 @@ func _nation_row(n: String) -> Control:
 			ob.add_item(Data.nation_short(m))
 			ob.set_item_metadata(ob.item_count - 1, m)
 	_war_targets[n] = ob
-	var jb := UITheme.button("Gemensamt krig mot", _joint_war.bind(n), 14)
+	var jb := UITheme.button("Joint war against", _joint_war.bind(n), 14)
 	jb.custom_minimum_size = Vector2(170, 32)
-	jb.tooltip_text = "Be en allierad att förklara krig mot en annan nation."
+	jb.tooltip_text = "Ask an ally to declare war on another nation."
 	jw.add_child(jb)
 	jw.add_child(ob)
 	buttons["gemensamt_krig"] = jb
@@ -118,7 +118,7 @@ func _nation_row(n: String) -> Control:
 
 func _crisis_row() -> Control:
 	var vb := VBoxContainer.new()
-	vb.add_child(UITheme.label("Andra makter", 18, UITheme.GOLD))
+	vb.add_child(UITheme.label("Other powers", 18, UITheme.GOLD))
 	var l := UITheme.wrap_label("", 14)
 	vb.add_child(l)
 	_rows["_crisis"] = {"label": l}
@@ -137,23 +137,23 @@ func update_values() -> void:
 		var rel := Game.get_rel(p, n)
 		var st: String = rel["status"]
 		var alive: bool = Game.nations[n]["alive"]
-		row["status"].text = ("%s   Relation: %d" % [Game.STATUS_NAMES[st], int(rel["value"])]) if alive else "Har fallit"
+		row["status"].text = ("%s   Relation: %d" % [Game.STATUS_NAMES[st], int(rel["value"])]) if alive else "Has fallen"
 		row["status"].add_theme_color_override("font_color", Game.STATUS_COLORS[st] if alive else UITheme.DIM)
 		row["bar"].value = rel["value"]
 		var fill_col := UITheme.GOOD if rel["value"] >= 0 else UITheme.BAD
 		row["bar"].add_theme_stylebox_override("fill", UITheme.box(fill_col, Color(0, 0, 0, 0), 0, 3, 0.0))
 		var their := Game.nation_strength(n)
 		var ratio := my_str / maxf(1.0, their)
-		var cmp := "jämnstarka"
+		var cmp := "evenly matched"
 		if ratio > 1.6:
-			cmp = "du är mycket starkare"
+			cmp = "you are much stronger"
 		elif ratio > 1.15:
-			cmp = "du är starkare"
+			cmp = "you are stronger"
 		elif ratio < 0.6:
-			cmp = "de är mycket starkare"
+			cmp = "they are much stronger"
 		elif ratio < 0.87:
-			cmp = "de är starkare"
-		row["strength"].text = "Styrka: %d mot din %d (%s).  Öar: %d" % [int(their), int(my_str), cmp, Game.world.islands_of(n).size()]
+			cmp = "they are stronger"
+		row["strength"].text = "Strength: %d against your %d (%s).  Islands: %d" % [int(their), int(my_str), cmp, Game.world.islands_of(n).size()]
 		var b: Dictionary = row["buttons"]
 		b["krig"].disabled = not alive or st == "krig"
 		b["fred"].disabled = not alive or st != "krig"
@@ -169,16 +169,16 @@ func update_values() -> void:
 		var name: String = Data.HOSTILE_FACTIONS[f]["name"]
 		match f:
 			"vildpirater":
-				lines.append("%s: fiender till alla. Dyker upp som händelser." % name)
+				lines.append("%s: enemies of everyone. They appear as events." % name)
 			"spokflottan":
 				if not Game.settings["crises"].get("spokflottan", false):
 					continue
-				var state := "aktiv – alla är i fara!" if Game.active_crises.has("spokflottan") else "vilar i djupet ... än så länge"
+				var state := "active – everyone is in danger!" if Game.active_crises.has("spokflottan") else "resting in the deep ... for now"
 				lines.append("%s: %s" % [name, state])
 			"vaktarna":
 				if not Game.settings["crises"].get("vaktarna", false):
 					continue
-				var state := "vakna och fientliga mot alla!" if Game.vaktarna_awake else ("fientliga mot dig" if Game.vaktarna_angry.has(p) else "sover på Solstensön. Kom inte för nära.")
+				var state := "awake and hostile to everyone!" if Game.vaktarna_awake else ("hostile to you" if Game.vaktarna_angry.has(p) else "asleep on Sunstone Isle. Do not come too close.")
 				lines.append("%s: %s" % [name, state])
 	_rows["_crisis"]["label"].text = "\n".join(lines)
 

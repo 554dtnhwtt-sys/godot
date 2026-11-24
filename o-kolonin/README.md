@@ -1,16 +1,17 @@
-# Ö-kolonin – pilot 0.1
+# Island Colony – pilot 0.4
 
-Bygg- och strategispel i ett karibiskt övärld. Gjort i Godot 4.7.
+A colony-building and naval strategy game in a Caribbean archipelago, made with Godot 4.7.
+(Swedish: spelets text är på engelska. Dokumenten i `docs/` är på svenska.)
 
-## Starta
-1. Öppna Godot 4.7.2.
-2. Välj **Importera** och peka på filen `project.godot` i den här mappen.
-3. Tryck **F5** (Kör).
+## How to run
+1. Open Godot 4.7.2.
+2. Click **Import** and select `project.godot` in this folder.
+3. Press **F5** (Run). The first time, Godot needs a few seconds to import the images.
 
-## Kontroller
-- WASD / pilar: kamera. Scrollhjul: zoom. H: hemön.
-- Mellanslag: paus. 1–4: hastighet.
-- Vänsterklick/dra: markera skepp. Högerklick: segla, anfall, kolonisera, handelsrutt.
-- Klicka på en egen ö för att bygga. F: forskning. P: diplomati. F1: hjälp. Esc: meny.
+## Controls
+- WASD / arrow keys: camera. Mouse wheel: zoom. H: home island.
+- Space: pause. 1–4: game speed.
+- Left-click / drag: select ships. Right-click: sail, attack, colonize, start a trade route.
+- Click one of your islands to build. F: research. P: diplomacy. F1: help. Esc: menu.
 
-Se `docs/` för dina meddelanden, speldesignen och loggen.
+See `docs/` for the design notes and the development log (in Swedish).

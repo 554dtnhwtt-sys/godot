@@ -8,7 +8,7 @@ signal diplomacy_changed
 signal notify(text: String, color: Color)
 signal popup_requested(data: Dictionary)
 
-const STATUS_NAMES := {"krig": "Krig", "fred": "Fred", "handel": "Handelsavtal", "allians": "Allians"}
+const STATUS_NAMES := {"krig": "War", "fred": "Peace", "handel": "Trade agreement", "allians": "Alliance"}
 const STATUS_COLORS := {"krig": Color(0.95, 0.35, 0.3), "fred": Color(0.85, 0.85, 0.8), "handel": Color(0.95, 0.8, 0.35), "allians": Color(0.45, 0.85, 0.5)}
 
 var settings := {
@@ -341,7 +341,7 @@ func tick_research(nation: String) -> void:
 		st["current_research"] = ""
 		st["research_progress"] = 0.0
 		if nation == player:
-			say("Forskning klar: %s" % Data.RESEARCH[cur]["name"], Data.RESOURCE_COLORS["forskning"])
+			say("Research complete: %s" % Data.RESEARCH[cur]["name"], Data.RESOURCE_COLORS["forskning"])
 		_next_research(nation)
 		research_changed.emit()
 
@@ -394,18 +394,18 @@ func set_status(a: String, b: String, new_status: String) -> void:
 	var nb: String = Data.nation_short(b)
 	match new_status:
 		"krig":
-			say("%s har förklarat krig mot %s!" % [na, nb], col)
+			say("%s has declared war on %s!" % [na, nb], col)
 			if world:
 				world.on_war_declared(a, b)
 		"fred":
 			if old == "krig":
-				say("%s och %s har slutit fred." % [na, nb], col)
+				say("%s and %s have made peace." % [na, nb], col)
 			else:
-				say("%s och %s har brutit sitt avtal." % [na, nb], col)
+				say("%s and %s have broken their agreement." % [na, nb], col)
 		"handel":
-			say("%s och %s har ingått ett handelsavtal." % [na, nb], col)
+			say("%s and %s have signed a trade agreement." % [na, nb], col)
 		"allians":
-			say("%s och %s har bildat en allians!" % [na, nb], col)
+			say("%s and %s have formed an alliance!" % [na, nb], col)
 	diplomacy_changed.emit()
 
 
@@ -444,61 +444,61 @@ func player_proposal(action: String, target: String, extra: String = "") -> Dict
 	match action:
 		"krig":
 			if st == "krig":
-				return {"ok": false, "text": "Ni är redan i krig."}
+				return {"ok": false, "text": "You are already at war."}
 			declare_war(me, target)
-			return {"ok": true, "text": "Krigsförklaringen är skickad till %s." % tname}
+			return {"ok": true, "text": "The declaration of war has been sent to %s." % tname}
 		"fred":
 			if st != "krig":
-				return {"ok": false, "text": "Ni är inte i krig."}
+				return {"ok": false, "text": "You are not at war."}
 			var war_len := time - float(rel["since"])
 			var willing := v + war_len / 12.0 + (ratio - 1.0) * 40.0
 			if willing > -20.0:
 				set_status(me, target, "fred")
 				change_relation(me, target, 10.0)
-				return {"ok": true, "text": "%s accepterar fred." % tname}
+				return {"ok": true, "text": "%s accepts peace." % tname}
 			change_relation(me, target, -2.0)
-			return {"ok": false, "text": "%s vägrar. De tror att de kan vinna kriget." % tname}
+			return {"ok": false, "text": "%s refuses. They believe they can win the war." % tname}
 		"handel":
 			if st == "krig":
-				return {"ok": false, "text": "Ni måste sluta fred först."}
+				return {"ok": false, "text": "You must make peace first."}
 			if st == "handel" or st == "allians":
-				return {"ok": false, "text": "Ni har redan ett avtal."}
+				return {"ok": false, "text": "You already have an agreement."}
 			if v >= 5.0:
 				set_status(me, target, "handel")
 				change_relation(me, target, 8.0)
-				return {"ok": true, "text": "%s skriver under handelsavtalet." % tname}
-			return {"ok": false, "text": "%s litar inte tillräckligt på er (relation minst 5 krävs)." % tname}
+				return {"ok": true, "text": "%s signs the trade agreement." % tname}
+			return {"ok": false, "text": "%s does not trust you enough (relation of at least 5 required)." % tname}
 		"allians":
 			if st != "handel":
-				return {"ok": false, "text": "Ett handelsavtal krävs innan en allians."}
+				return {"ok": false, "text": "A trade agreement is required before an alliance."}
 			if v >= 45.0:
 				set_status(me, target, "allians")
 				change_relation(me, target, 10.0)
-				return {"ok": true, "text": "%s går med på en allians!" % tname}
-			return {"ok": false, "text": "%s vill inte binda sig (relation minst 45 krävs)." % tname}
+				return {"ok": true, "text": "%s agrees to an alliance!" % tname}
+			return {"ok": false, "text": "%s does not want to commit (relation of at least 45 required)." % tname}
 		"bryt":
 			if st != "handel" and st != "allians":
-				return {"ok": false, "text": "Det finns inget avtal att bryta."}
+				return {"ok": false, "text": "There is no agreement to break."}
 			set_status(me, target, "fred")
 			change_relation(me, target, -20.0)
-			return {"ok": true, "text": "Avtalet med %s är brutet." % tname}
+			return {"ok": true, "text": "The agreement with %s is broken." % tname}
 		"gava":
 			var amount := 100.0
 			if res(me, "guld") < amount:
-				return {"ok": false, "text": "Du har inte 100 guld."}
+				return {"ok": false, "text": "You do not have 100 gold."}
 			add_res(me, "guld", -amount)
 			add_res(target, "guld", amount)
 			change_relation(me, target, 10.0 + mod(me, "relations") * 5.0)
 			resources_changed.emit()
-			return {"ok": true, "text": "%s tar tacksamt emot gåvan." % tname}
+			return {"ok": true, "text": "%s gratefully accepts the gift." % tname}
 		"lyxgava":
 			# Kryddor och pärlor är mer värda som gåvor.
 			var cost := {"kryddor": 20.0, "parlor": 10.0}
 			if not can_afford(me, cost):
-				return {"ok": false, "text": "Kräver 20 kryddor och 10 pärlor."}
+				return {"ok": false, "text": "Requires 20 spices and 10 pearls."}
 			pay(me, cost)
 			change_relation(me, target, 22.0 + mod(me, "relations") * 8.0)
-			return {"ok": true, "text": "%s blir mycket imponerade av de exotiska gåvorna." % tname}
+			return {"ok": true, "text": "%s is deeply impressed by the exotic gifts." % tname}
 		"tribut":
 			if ratio >= 1.6:
 				var amount: float = floorf(res(target, "guld") * 0.3)
@@ -506,27 +506,27 @@ func player_proposal(action: String, target: String, extra: String = "") -> Dict
 				add_res(me, "guld", amount)
 				change_relation(me, target, -25.0)
 				resources_changed.emit()
-				return {"ok": true, "text": "%s böjer sig och betalar %d guld i tribut." % [tname, int(amount)]}
+				return {"ok": true, "text": "%s yields and pays %d gold in tribute." % [tname, int(amount)]}
 			change_relation(me, target, -12.0)
 			if v < -40.0 and time > ai_grace():
 				declare_war(target, me)
-				return {"ok": false, "text": "%s ser kravet som en förolämpning och förklarar krig!" % tname}
-			return {"ok": false, "text": "%s skrattar åt kravet. (Du behöver vara mycket starkare.)" % tname}
+				return {"ok": false, "text": "%s takes the demand as an insult and declares war!" % tname}
+			return {"ok": false, "text": "%s laughs at the demand. (You need to be much stronger.)" % tname}
 		"gemensamt_krig":
 			if st != "allians":
-				return {"ok": false, "text": "Bara allierade kan dras in i krig."}
+				return {"ok": false, "text": "Only allies can be drawn into a war."}
 			if extra == "" or extra == target:
-				return {"ok": false, "text": "Välj ett mål."}
+				return {"ok": false, "text": "Choose a target."}
 			if at_war(target, extra):
-				return {"ok": false, "text": "%s är redan i krig med %s." % [tname, Data.nation_short(extra)]}
+				return {"ok": false, "text": "%s is already at war with %s." % [tname, Data.nation_short(extra)]}
 			if get_rel(target, extra)["value"] < 25.0:
 				if status(target, extra) == "handel" or status(target, extra) == "allians":
 					set_status(target, extra, "fred")
 				declare_war(target, extra)
 				change_relation(me, target, 5.0)
-				return {"ok": true, "text": "%s ansluter till kriget mot %s!" % [tname, Data.nation_short(extra)]}
-			return {"ok": false, "text": "%s vill inte gå i krig mot %s." % [tname, Data.nation_short(extra)]}
-	return {"ok": false, "text": "Okänt förslag."}
+				return {"ok": true, "text": "%s joins the war against %s!" % [tname, Data.nation_short(extra)]}
+			return {"ok": false, "text": "%s does not want to go to war against %s." % [tname, Data.nation_short(extra)]}
+	return {"ok": false, "text": "Unknown proposal."}
 
 
 ## Svar på ett AI-förslag som visats i en popup.
@@ -612,7 +612,7 @@ func _ai_decide(a: String, b: String) -> void:
 		# Fred om kriget går dåligt eller pågått länge.
 		if since > 120.0 and (ratio < 0.7 or since > 600.0 + v * 4.0) and randf() < 0.25:
 			if is_player:
-				_ask_player(a, "fred", "%s erbjuder fred." % Data.nation_short(a))
+				_ask_player(a, "fred", "%s offers peace." % Data.nation_short(a))
 			elif nations[b]["ai"]:
 				set_status(a, b, "fred")
 		return
@@ -627,24 +627,24 @@ func _ai_decide(a: String, b: String) -> void:
 	# Tributkrav mot spelaren om AI:n är mycket starkare.
 	if is_player and st == "fred" and ratio > 2.0 and v < 0.0 and randf() < 0.04 * ai_aggro():
 		var amount: float = floorf(maxf(50.0, res(player, "guld") * 0.25))
-		_ask_player(a, "tribut_krav", "%s kräver %d guld i tribut. Vägrar du kan det bli krig." % [Data.nation_short(a), int(amount)], {"amount": amount})
+		_ask_player(a, "tribut_krav", "%s demands %d gold in tribute. If you refuse, it may mean war." % [Data.nation_short(a), int(amount)], {"amount": amount})
 		return
 	# Handel och allianser
 	if st == "fred" and v > 15.0 and randf() < 0.12:
 		if is_player:
-			_ask_player(a, "handel", "%s föreslår ett handelsavtal (+guld för båda)." % Data.nation_short(a))
+			_ask_player(a, "handel", "%s proposes a trade agreement (+gold for both)." % Data.nation_short(a))
 		elif nations[b]["ai"] and a < b:
 			set_status(a, b, "handel")
 	elif st == "handel" and v > 60.0 and randf() < 0.06:
 		if is_player:
-			_ask_player(a, "allians", "%s föreslår en allians." % Data.nation_short(a))
+			_ask_player(a, "allians", "%s proposes an alliance." % Data.nation_short(a))
 		elif nations[b]["ai"] and a < b:
 			set_status(a, b, "allians")
 	elif st == "allians" and is_player and randf() < 0.1:
 		# Be spelaren om hjälp i ett krig.
 		for c in nations:
 			if c != a and c != player and nations[c]["alive"] and at_war(a, c) and not at_war(player, c):
-				_ask_player(a, "gemensamt_krig", "Er allierade %s ber er gå med i kriget mot %s." % [Data.nation_short(a), Data.nation_short(c)], {"target": c})
+				_ask_player(a, "gemensamt_krig", "Your ally %s asks you to join the war against %s." % [Data.nation_short(a), Data.nation_short(c)], {"target": c})
 				break
 
 

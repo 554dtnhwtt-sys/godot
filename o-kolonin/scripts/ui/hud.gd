@@ -107,7 +107,7 @@ func _build_top_bar() -> void:
 	for i in SPEED_LABELS.size():
 		var b := UITheme.button(SPEED_LABELS[i], _on_speed.bind(i), 14)
 		b.custom_minimum_size = Vector2(40, 30)
-		b.tooltip_text = "Paus (mellanslag)" if i == 0 else "Hastighet %dx (tangent %d)" % [int(Data.SPEEDS[i - 1]), i]
+		b.tooltip_text = "Pause (Space)" if i == 0 else "Speed %dx (key %d)" % [int(Data.SPEEDS[i - 1]), i]
 		hb.add_child(b)
 		speed_buttons.append(b)
 
@@ -143,30 +143,30 @@ func _update_resources() -> void:
 		if r == "befolkning":
 			var pop: float = world.total_population(p)
 			res_labels[r].text = str(int(pop))
-			res_chips[r].tooltip_text = "Befolkning: %d invånare på alla dina öar.\nInvånarna arbetar i byggnaderna, äter mat och betalar skatt.\nBygg bosättningar för fler invånare." % int(pop)
+			res_chips[r].tooltip_text = "Population: %d people on all your islands.\nThey work in your buildings, eat food and pay taxes.\nBuild settlements for more people." % int(pop)
 			continue
 		res_labels[r].text = _fmt(v)
 		var rate: float = rates.get(r, 0.0)
 		var tip := "%s: %d" % [Data.RESOURCE_NAMES[r], int(v)]
 		if not Game.is_national(r):
-			tip += " (totalt på alla öar)"
+			tip += " (total on all islands)"
 			for isl in world.islands_of(p):
 				if isl.good(r) >= 1.0:
 					tip += "\n  %s: %d" % [isl.display_name, int(isl.good(r))]
 		if r == "forskning":
 			var st: Dictionary = Game.nations[p]
-			tip = "Forskning: %+.1f per dag" % rate
+			tip = "Research: %+.1f per day" % rate
 			if st["current_research"] != "":
-				tip += "\nPågår: %s (%d/%d)" % [Data.RESEARCH[st["current_research"]]["name"], int(st["research_progress"]), int(Data.research_cost(st["current_research"]))]
+				tip += "\nIn progress: %s (%d/%d)" % [Data.RESEARCH[st["current_research"]]["name"], int(st["research_progress"]), int(Data.research_cost(st["current_research"]))]
 			else:
-				tip += "\nIngen forskning pågår – öppna Forskning (F)."
+				tip += "\nNo research in progress – open Research (F)."
 			res_labels[r].text = "%+.1f" % rate
 		else:
-			tip += "\n%+.1f per dag" % rate
+			tip += "\n%+.1f per day" % rate
 			if r in Data.LUXURY_PRICES:
-				tip += "\nLyxvara – marknader säljer överskott över %d." % int(Data.LUXURY_RESERVE)
+				tip += "\nLuxury good – markets sell any surplus above %d." % int(Data.LUXURY_RESERVE)
 			if r == "rom":
-				tip += "\nRom i lager: skeppen laddar 12 % snabbare och träffar 10 % hårdare."
+				tip += "\nRum in stock: ships reload 12% faster and hit 10% harder."
 		res_chips[r].tooltip_text = tip
 		res_labels[r].add_theme_color_override("font_color", UITheme.TEXT if rate >= -0.01 or v > 5.0 else UITheme.BAD)
 
@@ -190,10 +190,10 @@ func _build_side_buttons() -> void:
 	vb.custom_minimum_size = Vector2(176, 0)
 	vb.add_theme_constant_override("separation", 6)
 	root.add_child(vb)
-	var b1 := UITheme.button("Forskning  (F)", toggle_research, 16)
-	var b2 := UITheme.button("Diplomati  (P)", toggle_diplomacy, 16)
-	var b3 := UITheme.button("Meny  (Esc)", toggle_menu, 16)
-	var b4 := UITheme.button("Hjälp  (F1)", show_help, 16)
+	var b1 := UITheme.button("Research  (F)", toggle_research, 16)
+	var b2 := UITheme.button("Diplomacy  (P)", toggle_diplomacy, 16)
+	var b3 := UITheme.button("Menu  (Esc)", toggle_menu, 16)
+	var b4 := UITheme.button("Help  (F1)", show_help, 16)
 	for b in [b1, b2, b4, b3]:
 		b.custom_minimum_size = Vector2(176, 36)
 		vb.add_child(b)
@@ -350,7 +350,7 @@ func _build_ship_info() -> void:
 		_title_row(s.def["name"], UITheme.GOLD, Game.player)
 		info_box.add_child(UITheme.wrap_label(s.def["desc"], 14, UITheme.DIM))
 	else:
-		_title_row("Flotta – %d skepp" % sel.size(), UITheme.GOLD, Game.player)
+		_title_row("Fleet – %d ships" % sel.size(), UITheme.GOLD, Game.player)
 		var parts: Array = []
 		for t in counts:
 			parts.append("%d %s" % [counts[t], Data.SHIPS[t]["name"].to_lower()])
@@ -381,28 +381,28 @@ func _build_ship_info() -> void:
 		var spd := ""
 		if world.selected_ships.size() > 0 and is_instance_valid(world.selected_ships[0]):
 			var s0 = world.selected_ships[0]
-			spd = "   Fart: %d%% (vind)" % int(s0.wind_factor(s0.heading) * 100.0)
-		stats.text = "Skrov %d/%d   Kanoner %d   Soldater %d%s\n%s" % [int(hp), int(mhp), cannons, int(tr), spd, order_txt]
+			spd = "   Speed: %d%% (wind)" % int(s0.wind_factor(s0.heading) * 100.0)
+		stats.text = "Hull %d/%d   Cannons %d   Soldiers %d%s\n%s" % [int(hp), int(mhp), cannons, int(tr), spd, order_txt]
 	_dynamic.append(_upd1)
 	var hb := HBoxContainer.new()
-	hb.add_child(UITheme.button("Stoppa", _stop_selected, 14))
-	hb.add_child(UITheme.button("Till hemön", _send_home, 14))
+	hb.add_child(UITheme.button("Stop", _stop_selected, 14))
+	hb.add_child(UITheme.button("Return home", _send_home, 14))
 	info_box.add_child(hb)
 	if sel.size() > 1:
 		var fb := HBoxContainer.new()
 		fb.add_theme_constant_override("separation", 6)
 		fb.add_child(UITheme.label("Formation:", 14, UITheme.DIM))
-		var tips := {"linje": "Linje: skeppen seglar efter varandra – bra för bredsidor.", "kil": "Kil: spjutspets med ledaren längst fram.", "spridd": "Spridd: stort avstånd mellan skeppen – svårare att träffa."}
+		var tips := {"linje": "Line: the ships sail one after another – ideal for broadsides.", "kil": "Wedge: a spearhead with the leader in front.", "spridd": "Spread: wide gaps between the ships – harder to hit."}
 		for f in world.FORMATIONS:
 			var b := UITheme.button(world.FORMATIONS[f], _set_formation.bind(f), 14)
 			b.modulate = Color(1.0, 0.85, 0.4) if world.formation == f else Color(1, 1, 1)
 			b.tooltip_text = tips[f]
 			fb.add_child(b)
 		info_box.add_child(fb)
-	var hint := "Högerklick: segla, anfall skepp/ö, kolonisera obebodd ö."
+	var hint := "Right-click: sail, attack a ship or island, colonize an empty island."
 	for s in sel:
 		if s.def.get("trade", false):
-			hint += "\nHandelsfartyg: lägg dig vid en egen ö och högerklicka på en annan egen ö för att starta en handelsrutt."
+			hint += "\nMerchant ship: anchor at one of your islands and right-click another of your islands to start a trade route."
 			break
 	if sel.size() == 1:
 		_ship_details(sel[0])
@@ -420,19 +420,19 @@ func _ship_details(s) -> void:
 		var lv: int = s.level()
 		var nxt: String = ""
 		if lv + 1 < Data.XP_LEVELS.size():
-			nxt = " (%d / %d erfarenhet)" % [int(s.xp), int(Data.XP_LEVELS[lv + 1]["xp"])]
-		var t := "Besättning: %s%s" % [Data.XP_LEVELS[lv]["name"], nxt]
+			nxt = " (%d / %d experience)" % [int(s.xp), int(Data.XP_LEVELS[lv + 1]["xp"])]
+		var t := "Crew: %s%s" % [Data.XP_LEVELS[lv]["name"], nxt]
 		if s.cargo_cap() > 0.0:
 			var parts: Array = []
 			for g in s.cargo:
 				if s.cargo[g] >= 1.0:
 					parts.append("%d %s" % [int(s.cargo[g]), Data.RESOURCE_NAMES[g].to_lower()])
-			t += "\nLast (%d / %d): %s" % [int(s.cargo_total()), int(s.cargo_cap()), ", ".join(parts) if parts.size() > 0 else "tom"]
+			t += "\nCargo (%d / %d): %s" % [int(s.cargo_total()), int(s.cargo_cap()), ", ".join(parts) if parts.size() > 0 else "empty"]
 		if s.upgrades.size() > 0:
 			var up: Array = []
 			for k in s.upgrades:
 				up.append(Data.UPGRADES[k]["name"])
-			t += "\nUppgraderingar: " + ", ".join(up)
+			t += "\nUpgrades: " + ", ".join(up)
 		info.text = t
 	_dynamic.append(_upd_ship)
 	# Amiral
@@ -440,7 +440,7 @@ func _ship_details(s) -> void:
 		var tn: Array = []
 		for t in s.admiral["traits"]:
 			tn.append("%s (%s)" % [Data.ADMIRAL_TRAITS[t]["name"], Data.ADMIRAL_TRAITS[t]["desc"]])
-		info_box.add_child(UITheme.wrap_label("Amiral %s – %s\nGäller alla dina skepp inom %d steg från flaggskeppet." % [s.admiral["name"], ", ".join(tn), int(Data.ADMIRAL_RANGE)], 14, UITheme.GOLD))
+		info_box.add_child(UITheme.wrap_label("Admiral %s – %s\nApplies to all your ships within %d paces of the flagship." % [s.admiral["name"], ", ".join(tn), int(Data.ADMIRAL_RANGE)], 14, UITheme.GOLD))
 	elif not s.def.get("trade", false):
 		var ah := HBoxContainer.new()
 		ah.add_theme_constant_override("separation", 6)
@@ -448,15 +448,15 @@ func _ship_details(s) -> void:
 		var do_recruit := func():
 			world.recruit_admiral(s)
 			_rebuild_info()
-		var rb := UITheme.button("Utse amiral (%d guld)" % int(cost), do_recruit, 14)
+		var rb := UITheme.button("Appoint admiral (%d gold)" % int(cost), do_recruit, 14)
 		rb.disabled = Game.res(p, "guld") < cost
-		rb.tooltip_text = "En amiral gör skeppet till flaggskepp. Amiralens egenskaper gäller alla egna skepp i närheten."
+		rb.tooltip_text = "An admiral makes this ship a flagship. The admiral's traits apply to all your ships nearby."
 		ah.add_child(rb)
 		for adm in world.free_admirals(p):
 			var do_assign := func():
 				world.assign_admiral(s, adm)
 				_rebuild_info()
-			var fb := UITheme.button("Ge befälet till %s" % adm["name"], do_assign, 14)
+			var fb := UITheme.button("Give command to %s" % adm["name"], do_assign, 14)
 			ah.add_child(fb)
 		info_box.add_child(ah)
 	# Uppgraderingar på varvet
@@ -464,7 +464,7 @@ func _ship_details(s) -> void:
 	if yard != null:
 		var ug := HBoxContainer.new()
 		ug.add_theme_constant_override("separation", 6)
-		ug.add_child(UITheme.label("Varvet på %s:" % yard.display_name, 14, UITheme.DIM))
+		ug.add_child(UITheme.label("Shipyard at %s:" % yard.display_name, 14, UITheme.DIM))
 		for k in Data.UPGRADES:
 			if s.upgrades.has(k):
 				continue
@@ -473,12 +473,12 @@ func _ship_details(s) -> void:
 				world.upgrade_ship(s, k)
 				_rebuild_info()
 			var ub := UITheme.button(ud["name"], do_upgrade, 13)
-			ub.tooltip_text = "%s\nKostnad: %s (från %s)" % [ud["desc"], Data.cost_text(ud["cost"]), yard.display_name]
+			ub.tooltip_text = "%s\nCost: %s (from %s)" % [ud["desc"], Data.cost_text(ud["cost"]), yard.display_name]
 			ub.disabled = not Game.can_afford_at(p, yard, ud["cost"])
 			ug.add_child(ub)
 		info_box.add_child(ug)
 	elif not s.def.get("trade", false):
-		info_box.add_child(UITheme.wrap_label("Segla till en egen ö med skeppsvarv för att uppgradera skeppet.", 13, UITheme.DIM))
+		info_box.add_child(UITheme.wrap_label("Sail to one of your islands with a shipyard to upgrade this ship.", 13, UITheme.DIM))
 
 
 func _set_formation(f: String) -> void:
@@ -501,37 +501,37 @@ func _send_home() -> void:
 func _order_text(s) -> String:
 	match s.order:
 		"move":
-			return "Order: segla"
+			return "Order: sailing"
 		"attack":
-			return "Order: anfall %s" % (s.target_ship.display_name().to_lower() if s.target_ship != null and is_instance_valid(s.target_ship) else "")
+			return "Order: attack %s" % (s.target_ship.display_name().to_lower() if s.target_ship != null and is_instance_valid(s.target_ship) else "")
 		"attack_island":
-			return "Order: anfall %s" % (s.target_island.display_name if s.target_island != null else "")
+			return "Order: attack %s" % (s.target_island.display_name if s.target_island != null else "")
 		"colonize":
-			return "Order: kolonisera %s" % (s.target_island.display_name if s.target_island != null else "")
+			return "Order: colonize %s" % (s.target_island.display_name if s.target_island != null else "")
 		"trade":
-			return "Handelsrutt: %s – %s" % [s.trade_a.display_name, s.trade_b.display_name] if s.trade_a != null and s.trade_b != null else "Handelsrutt"
-	return "Order: ligger för ankar"
+			return "Trade route: %s – %s" % [s.trade_a.display_name, s.trade_b.display_name] if s.trade_a != null and s.trade_b != null else "Trade route"
+	return "Order: at anchor"
 
 
 func _build_foreign_ship(s) -> void:
 	_title_row("%s – %s" % [s.def["name"], Data.nation_short(s.owner_id)], Data.nation_color(s.owner_id).lightened(0.3), s.owner_id)
-	var st := "I krig" if Game.at_war(Game.player, s.owner_id) else "Inte i krig"
+	var st := "At war" if Game.at_war(Game.player, s.owner_id) else "Not at war"
 	var l := UITheme.label("", 15)
 	info_box.add_child(l)
 	var _upd2 := func():
 		if is_instance_valid(s):
-			l.text = "Skrov %d/%d   Kanoner %d   %s" % [int(s.hp), int(s.max_hp), s.def["cannons"], st]
+			l.text = "Hull %d/%d   Cannons %d   %s" % [int(s.hp), int(s.max_hp), s.def["cannons"], st]
 	_dynamic.append(_upd2)
 func _build_island_info(isl) -> void:
 	var p := Game.player
 	var owner: String = isl.owner_id
-	var owner_txt := "Obebodd" if owner == "neutral" else Data.nation_name(owner)
+	var owner_txt := "Uninhabited" if owner == "neutral" else Data.nation_name(owner)
 	_title_row(isl.display_name, UITheme.GOLD, owner)
 	var sub := UITheme.label(owner_txt, 15, Data.nation_color(owner).lightened(0.35) if owner != "neutral" else UITheme.DIM)
 	info_box.add_child(sub)
 	# Fyndigheter
 	var dep := HBoxContainer.new()
-	dep.add_child(UITheme.label("Resurser:", 14, UITheme.DIM))
+	dep.add_child(UITheme.label("Resources:", 14, UITheme.DIM))
 	for d in isl.deposits:
 		var chip := HBoxContainer.new()
 		chip.add_child(ResIcon.new(d, 18.0))
@@ -540,42 +540,42 @@ func _build_island_info(isl) -> void:
 	info_box.add_child(dep)
 	if owner == "neutral":
 		if isl.guardians:
-			info_box.add_child(UITheme.wrap_label("Helig mark. Ingen kan kolonisera Solstensön.", 14, UITheme.DIM))
+			info_box.add_child(UITheme.wrap_label("Sacred ground. No one can colonize Sunstone Isle.", 14, UITheme.DIM))
 		else:
-			info_box.add_child(UITheme.wrap_label("Markera ett skepp och högerklicka på ön för att kolonisera den.\nKostnad: %s" % Data.cost_text(Game.colonize_cost(p)), 14))
+			info_box.add_child(UITheme.wrap_label("Select a ship and right-click the island to colonize it.\nCost: %s" % Data.cost_text(Game.colonize_cost(p)), 14))
 		return
 	var status := UITheme.label("", 14)
 	info_box.add_child(status)
 	var _upd3 := func():
-		var t := "Garnison: %d / %d" % [int(isl.garrison), int(isl.max_garrison())]
+		var t := "Garrison: %d / %d" % [int(isl.garrison), int(isl.max_garrison())]
 		if owner == p:
-			t += "   Lediga platser: %d" % isl.free_slot_count()
+			t += "   Free plots: %d" % isl.free_slot_count()
 			if isl.trade_connected():
-				t += "   Handelsrutt aktiv"
+				t += "   Trade route active"
 		elif Game.is_playable(owner):
 			t += "   Relation: %s (%d)" % [Game.STATUS_NAMES[Game.status(p, owner)], int(Game.get_rel(p, owner)["value"])]
 		status.text = t
 	_dynamic.append(_upd3)
 	if owner != p:
 		if Game.is_playable(owner) and not Game.at_war(p, owner):
-			info_box.add_child(UITheme.wrap_label("Ni är inte i krig. Öppna Diplomati (P) för att förhandla eller förklara krig.", 13, UITheme.DIM))
+			info_box.add_child(UITheme.wrap_label("You are not at war. Open Diplomacy (P) to negotiate or declare war.", 13, UITheme.DIM))
 		else:
-			info_box.add_child(UITheme.wrap_label("Fiende. Markera skepp och högerklicka på ön för att anfalla. Skjut sönder kanonbatterierna – sedan landstiger soldaterna.", 13, UITheme.DIM))
+			info_box.add_child(UITheme.wrap_label("Enemy. Select ships and right-click the island to attack. Destroy the cannon batteries – then the soldiers land.", 13, UITheme.DIM))
 		return
 	var tabs := TabContainer.new()
 	tabs.custom_minimum_size = Vector2(600, 0)
 	tabs.add_theme_font_size_override("font_size", 14)
 	info_box.add_child(tabs)
 	var page_o := VBoxContainer.new()
-	page_o.name = "Ön"
+	page_o.name = "Island"
 	page_o.add_theme_constant_override("separation", 6)
 	tabs.add_child(page_o)
 	var page_b := VBoxContainer.new()
-	page_b.name = "Bygg"
+	page_b.name = "Build"
 	page_b.add_theme_constant_override("separation", 6)
 	tabs.add_child(page_b)
 	var page_v := VBoxContainer.new()
-	page_v.name = "Skeppsvarv"
+	page_v.name = "Shipyard"
 	page_v.add_theme_constant_override("separation", 6)
 	if isl.has_shipyard():
 		tabs.add_child(page_v)
@@ -589,9 +589,9 @@ func _build_island_info(isl) -> void:
 	var _upd_pop := func():
 		var need: float = isl.workers_needed()
 		var eff: float = isl.work_efficiency()
-		var txt := "Invånare: %d / %d   Arbetare som behövs: %d   Produktion: %d %%" % [int(isl.population), int(isl.housing()), int(need), int(eff * 100.0)]
+		var txt := "People: %d / %d   Workers needed: %d   Production: %d %%" % [int(isl.population), int(isl.housing()), int(need), int(eff * 100.0)]
 		if isl.starving:
-			txt += "   SVÄLT!"
+			txt += "   FAMINE!"
 		popl.text = txt
 		popl.add_theme_color_override("font_color", UITheme.BAD if isl.starving or eff < 0.7 else UITheme.TEXT)
 	_dynamic.append(_upd_pop)
@@ -614,20 +614,20 @@ func _build_island_info(isl) -> void:
 			var rate: float = isl.rates.get(g, 0.0)
 			gl.text = "%d %s" % [int(isl.good(g)), ("%+.1f" % rate) if absf(rate) >= 0.05 else ""]
 			gl.add_theme_color_override("font_color", UITheme.BAD if rate < -0.05 else (UITheme.GOOD if rate > 0.05 else UITheme.TEXT))
-			chip.tooltip_text = "%s på %s: %d (%+.1f per dag)" % [Data.RESOURCE_NAMES[g], isl.display_name, int(isl.good(g)), rate]
+			chip.tooltip_text = "%s on %s: %d (%+.1f per day)" % [Data.RESOURCE_NAMES[g], isl.display_name, int(isl.good(g)), rate]
 		_dynamic.append(_upd_g)
 	var _upd_cap := func():
-		cap_l.text = "Lagerplats: %d per vara. Varor flyttas mellan öar med handelsfartyg." % int(isl.capacity())
+		cap_l.text = "Storage: %d per good. Merchant ships move goods between islands." % int(isl.capacity())
 	_dynamic.append(_upd_cap)
 	# Guvernör
 	var gov := HBoxContainer.new()
 	gov.add_theme_constant_override("separation", 8)
 	var cb := CheckBox.new()
 	cb.focus_mode = Control.FOCUS_NONE
-	cb.text = "Guvernören bygger automatiskt"
+	cb.text = "The governor builds automatically"
 	cb.button_pressed = isl.governor
 	cb.add_theme_font_size_override("font_size", 14)
-	cb.tooltip_text = "Guvernören bygger själv efter vad ön behöver och den inriktning du väljer.\nHan sparar alltid minst 120 guld i statskassan."
+	cb.tooltip_text = "The governor builds by himself, based on what the island needs and the focus you choose.\nHe always keeps at least 120 gold in the treasury."
 	cb.toggled.connect(func(on): isl.governor = on)
 	gov.add_child(cb)
 	var ob := OptionButton.new()
@@ -645,7 +645,7 @@ func _build_island_info(isl) -> void:
 	gov.add_child(ob)
 	page_o.add_child(gov)
 	# Byggmeny
-	page_b.add_child(UITheme.label("Bygg", 17, UITheme.GOLD))
+	page_b.add_child(UITheme.label("Build", 17, UITheme.GOLD))
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 4)
@@ -661,19 +661,19 @@ func _build_island_info(isl) -> void:
 		var _upd4 := func():
 			var unlocked := Game.building_unlocked(p, type)
 			var cost := Game.building_cost(p, type)
-			var tip := "%s\n%s\n\nKostnad: %s" % [def["name"], def["desc"], Data.cost_text(cost)]
+			var tip := "%s\n%s\n\nCost: %s" % [def["name"], def["desc"], Data.cost_text(cost)]
 			var prod: Dictionary = def["prod"]
 			if prod.size() > 0:
 				var parts: Array = []
 				for r in prod:
 					parts.append("+%.1f %s" % [prod[r] * Game.prod_mod(p, r), Data.RESOURCE_NAMES[r].to_lower()])
-				tip += "\nProducerar: %s per dag" % ", ".join(parts)
+				tip += "\nProduces: %s per day" % ", ".join(parts)
 			if def.has("consumes"):
-				tip += "\nFörbrukar: %s per dag" % Data.cost_text(def["consumes"])
+				tip += "\nConsumes: %s per day" % Data.cost_text(def["consumes"])
 			if not unlocked:
-				tip += "\n\nKräver forskning: %s" % Data.RESEARCH[def["research"]]["name"]
+				tip += "\n\nRequires research: %s" % Data.RESEARCH[def["research"]]["name"]
 			elif not isl.can_build_type(type):
-				tip += "\n\nIngen ledig plats" + (" vid kusten." if def.get("coastal", false) else ".")
+				tip += "\n\nNo free plot" + (" on the coast." if def.get("coastal", false) else ".")
 			b.tooltip_text = tip
 			b.disabled = not unlocked or not isl.can_build_type(type) or not Game.can_afford_at(p, isl, cost)
 			b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6)
@@ -685,10 +685,10 @@ func _build_island_info(isl) -> void:
 	var parts: Array = []
 	for t in counts:
 		parts.append("%s ×%d" % [Data.BUILDINGS[t]["name"], counts[t]] if counts[t] > 1 else Data.BUILDINGS[t]["name"])
-	page_o.add_child(UITheme.wrap_label("På ön: " + ", ".join(parts), 13, UITheme.DIM))
+	page_o.add_child(UITheme.wrap_label("On the island: " + ", ".join(parts), 13, UITheme.DIM))
 	# Skeppsvarv
 	if isl.has_shipyard():
-		page_v.add_child(UITheme.label("Skeppsvarv", 17, UITheme.GOLD))
+		page_v.add_child(UITheme.label("Shipyard", 17, UITheme.GOLD))
 		var sg := GridContainer.new()
 		sg.columns = 4
 		sg.add_theme_constant_override("h_separation", 4)
@@ -702,9 +702,9 @@ func _build_island_info(isl) -> void:
 			var _upd5 := func():
 				var unlocked := Game.ship_unlocked(p, t)
 				var cost := Game.ship_cost(p, t)
-				var tip := "%s\n%s\n\nSkrov %d  Kanoner %d  Fart %d  Soldater %d\nByggtid: %d dagar\nKostnad: %s" % [sd["name"], sd["desc"], int(sd["hp"] * Game.mod(p, "ship_hp")), sd["cannons"], int(sd["speed"] * Game.mod(p, "ship_speed")), int(sd["troops"] * Game.mod(p, "troops")), int(sd["time"]), Data.cost_text(cost)]
+				var tip := "%s\n%s\n\nHull %d  Cannons %d  Speed %d  Soldiers %d  Cargo %d\nBuild time: %d days\nCost: %s" % [sd["name"], sd["desc"], int(sd["hp"] * Game.mod(p, "ship_hp")), sd["cannons"], int(sd["speed"] * Game.mod(p, "ship_speed")), int(sd["troops"] * Game.mod(p, "troops")), int(sd.get("cargo", 0)), int(sd["time"]), Data.cost_text(cost)]
 				if not unlocked:
-					tip += "\n\nKräver forskning: %s" % Data.RESEARCH[Data.SHIP_RESEARCH[t]]["name"]
+					tip += "\n\nRequires research: %s" % Data.RESEARCH[Data.SHIP_RESEARCH[t]]["name"]
 				b.tooltip_text = tip
 				b.disabled = not unlocked or not Game.can_afford_at(p, isl, cost) or isl.ship_queue.size() >= 5
 				b.modulate = Color(1, 1, 1) if unlocked else Color(0.6, 0.6, 0.6)
@@ -713,22 +713,22 @@ func _build_island_info(isl) -> void:
 		page_v.add_child(q)
 		var _upd6 := func():
 			if isl.ship_queue.is_empty():
-				q.text = "Kö: tom"
+				q.text = "Queue: empty"
 			else:
 				var names: Array = []
 				for e in isl.ship_queue:
 					names.append(Data.SHIPS[e["type"]]["name"])
-				q.text = "Kö: %s  (nästa klar om %d dagar)" % [", ".join(names), int(ceilf(isl.ship_queue[0]["left"]))]
+				q.text = "Queue: %s  (next one ready in %d days)" % [", ".join(names), int(ceilf(isl.ship_queue[0]["left"]))]
 		_dynamic.append(_upd6)
 func _on_build(isl, type: String) -> void:
 	if world.build(Game.player, isl, type):
-		Game.say("Bygger %s på %s." % [Data.BUILDINGS[type]["name"].to_lower(), isl.display_name], Color(0.85, 0.85, 0.75))
+		Game.say("Building a %s on %s." % [Data.BUILDINGS[type]["name"].to_lower(), isl.display_name], Color(0.85, 0.85, 0.75))
 		_rebuild_info()
 
 
 func _on_ship(isl, type: String) -> void:
 	if world.queue_ship(Game.player, isl, type):
-		Game.say("%s beställd på %s." % [Data.SHIPS[type]["name"], isl.display_name], Color(0.6, 0.85, 1))
+		Game.say("%s ordered at %s." % [Data.SHIPS[type]["name"], isl.display_name], Color(0.6, 0.85, 1))
 	_refresh_dynamic()
 
 
@@ -750,7 +750,7 @@ func _process(delta: float) -> void:
 		for i in speed_buttons.size():
 			var active := (i == 0 and Game.paused) or (i > 0 and not Game.paused and Game.speed_index == i - 1)
 			speed_buttons[i].modulate = Color(1.0, 0.85, 0.4) if active else Color(1, 1, 1)
-		wind_ctl.tooltip_text = "Vind: %s%s\nMedvind ger full fart, motvind halverar farten." % ["stark" if Game.wind_strength > 1.15 else ("svag" if Game.wind_strength < 0.85 else "måttlig"), " – STORM" if Game.storm > 0.3 else ""]
+		wind_ctl.tooltip_text = "Wind: %s%s\nA tailwind gives full speed, a headwind halves it." % ["strong" if Game.wind_strength > 1.15 else ("light" if Game.wind_strength < 0.85 else "moderate"), " – STORM" if Game.storm > 0.3 else ""]
 		wind_ctl.queue_redraw()
 		if research_panel.visible:
 			research_panel.update_progress()
@@ -848,11 +848,11 @@ func _on_ai_popup(data: Dictionary) -> void:
 	var from: String = data["from"]
 	show_popup({
 		"portrait": from,
-		"title": "Sändebud från %s" % Data.nation_name(from),
-		"text": data["text"] + "\n\nRelation just nu: %d" % int(Game.get_rel(Game.player, from)["value"]),
+		"title": "Envoy from %s" % Data.nation_name(from),
+		"text": data["text"] + "\n\nCurrent relation: %d" % int(Game.get_rel(Game.player, from)["value"]),
 		"buttons": [
-			{"text": "Acceptera", "cb": func(): Game.answer_ai_proposal(data, true)},
-			{"text": "Avböj", "cb": func(): Game.answer_ai_proposal(data, false)},
+			{"text": "Accept", "cb": func(): Game.answer_ai_proposal(data, true)},
+			{"text": "Decline", "cb": func(): Game.answer_ai_proposal(data, false)},
 		],
 	})
 
@@ -861,16 +861,16 @@ func toggle_menu() -> void:
 	if popup_open:
 		return
 	show_popup({
-		"title": "Ö-kolonin – meny",
-		"text": "%s\n%s\nPilotversion 0.1" % [Data.nation_name(Game.player), Game.date_text()],
+		"title": "Island Colony – menu",
+		"text": "%s\n%s\nPilot version 0.4" % [Data.nation_name(Game.player), Game.date_text()],
 		"buttons": [
-			{"text": "Fortsätt", "cb": Callable()},
-			{"text": "Hjälp och kontroller", "cb": show_help},
-			{"text": "Avsluta till huvudmenyn", "cb": func(): world.ended.emit("menu")},
-			{"text": "Avsluta spelet", "cb": func(): get_tree().quit()},
+			{"text": "Continue", "cb": Callable()},
+			{"text": "Help and controls", "cb": show_help},
+			{"text": "Quit to main menu", "cb": func(): world.ended.emit("menu")},
+			{"text": "Quit game", "cb": func(): get_tree().quit()},
 		],
 	})
 
 
 func show_help() -> void:
-	show_message_popup("Hjälp och kontroller", "KAMERA\nWASD / pilar: flytta kameran. Scrollhjul: zooma. Mellanknapp: dra kartan. H: hemön. Klicka på minikartan för att hoppa dit.\n\nTID\nMellanslag: paus. 1–4: hastighet (1x, 2x, 4x, 8x). Tiden går dag för dag.\n\nSKEPP\nVänsterklick / dra en ruta: markera skepp. Ctrl+A: alla skepp.\nHögerklick på vatten: segla dit. På fiendeskepp: anfall. På fiendeö: anfall – skeppen skjuter sönder kanonbatterier och landstiger sedan. På obebodd ö: kolonisera.\nSkeppen vänder själva bredsidan mot fienden. Medvind ger full fart, motvind halverar den.\n\nÖAR\nKlicka på en egen ö för att bygga. Kolonier utan handelsrutt producerar 60 %. Skicka ett handelsfartyg mellan hemön och kolonin.\n\nPANELER\nF: Forskning (byggnader, perks, skeppsmodeller). P: Diplomati (krig, fred, handel, allians, tribut, gåvor, gemensamma krig). Esc: meny.")
+	show_message_popup("Help and controls", "CAMERA\nWASD / arrow keys: move the camera. Mouse wheel: zoom. Middle mouse button: drag the map. H: home island. Click the minimap to jump there.\n\nTIME\nSpace: pause. 1-4: speed (1x, 2x, 4x, 8x). Time passes day by day.\n\nSHIPS\nLeft-click / drag a box: select ships. Ctrl+A: all ships.\nRight-click on water: sail there (in the chosen formation). On an enemy ship: attack. On an enemy island: attack – the ships destroy the cannon batteries and then land troops. On an empty island: colonize.\nShips turn their broadside to the enemy by themselves. A tailwind gives full speed, a headwind halves it.\nAdmirals boost every ship near their flagship. Crews gain experience in battle. Upgrade ships at your own shipyard.\n\nISLANDS\nClick one of your islands to build. Every island has its own storage – merchant ships move goods between islands automatically: surplus goes home, colonies get building materials and food.\nPeople need housing (settlements) and food, and they work in your buildings. Turn on the governor to let him build for you.\n\nPANELS\nF: Research (buildings, perks, ship designs). P: Diplomacy (war, peace, trade, alliances, tribute, gifts, joint wars). Esc: menu.")

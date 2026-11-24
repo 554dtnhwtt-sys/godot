@@ -62,3 +62,9 @@ Byggspel/idle-idéer: Pixelbyn, Kugghjulsfabriken, **Ö-kolonin (vald)**, Berget
 | Erfarenhet | Skepp får erfarenhet av att skada och sänka fiender: Rekryter, Sjövana, Veteraner, Elit. Bättre omladdning, träffsäkerhet och fart |
 | Amiraler | Rekryteras för guld och sätts på ett flaggskepp. 1–2 egenskaper (Djärv, Stormseglare, Kanonmästare, Försiktig, Taktiker, Kapare, Vältalig) som gäller alla egna skepp i närheten. Kan överleva när skeppet sjunker |
 | Uppgraderingar | Vid eget skeppsvarv: fler kanoner, kopparklätt skrov, nya segel, större lastrum |
+
+## Språk
+Spelet är på engelska (från version 0.4). Titel: **Island Colony**. Dokumenten i `docs/` är på svenska.
+Ö-namn på engelska: Crownholm, Black Reef, Kaluma, Porto Solmar, Coconut Isle, The Sandbank, Beacon Skerry,
+Stone Cairn, Turtle Isle, Mangrove Holm, Emerald Isle, Crystal Reef, Parrot Isle, Sunset Isle, Dead Man's Chest,
+Pearl Bay, Ghost Skerry, Shark's Tooth och Sunstone Isle. Havet heter the Emerald Sea.

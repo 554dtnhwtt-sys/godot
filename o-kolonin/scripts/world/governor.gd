@@ -10,10 +10,10 @@ const PRIORITY := {
 }
 
 const FOCUS := {
-	"balans": {"name": "Balans", "desc": "Bygger lite av allt efter vad ön behöver.", "boost": []},
-	"produktion": {"name": "Råvaror", "desc": "Satsar på trä, mat, sten och andra råvaror.", "boost": ["skogshuggare", "kokosodling", "fiskehydda", "stenbrott", "sandtakt", "sockerplantage", "kristallgruva", "guldgruva"]},
-	"handel": {"name": "Handel", "desc": "Satsar på marknad, rom, kryddor, pärlor och glas.", "boost": ["marknad", "romdestilleri", "kryddgard", "parldykare", "glasbruk", "sockerplantage"]},
-	"forsvar": {"name": "Försvar", "desc": "Satsar på kanonbatterier, fyrtorn och fler invånare.", "boost": ["kanonbatteri", "fyrtorn", "bosattning"]},
+	"balans": {"name": "Balanced", "desc": "Builds a bit of everything, based on what the island needs.", "boost": []},
+	"produktion": {"name": "Raw materials", "desc": "Focuses on wood, food, stone and other raw materials.", "boost": ["skogshuggare", "kokosodling", "fiskehydda", "stenbrott", "sandtakt", "sockerplantage", "kristallgruva", "guldgruva"]},
+	"handel": {"name": "Trade", "desc": "Focuses on markets, rum, spices, pearls and glass.", "boost": ["marknad", "romdestilleri", "kryddgard", "parldykare", "glasbruk", "sockerplantage"]},
+	"forsvar": {"name": "Defense", "desc": "Focuses on cannon batteries, lighthouses and more inhabitants.", "boost": ["kanonbatteri", "fyrtorn", "bosattning"]},
 }
 
 

@@ -66,3 +66,9 @@ Behövs inte för spelet. Allt görs lokalt i Godot.
 - Skepp: erfarenhetsnivåer, amiraler med egenskaper och uppgraderingar på varvet. AI:n använder också amiraler och uppgraderingar.
 - Öpanelen har nu flikar: Ön, Bygg och Skeppsvarv.
 - Testat: inga fel i 1300 speldagar med aggressiv AI och tidiga kriser.
+
+## 24 november – pilot 0.4: engelska
+- All text i spelet översatt till engelska: menyer, nationsval, lore, öar, byggnader, skepp, forskning,
+  diplomati, händelser, kriser, meddelanden och hjälp.
+- Projektet heter nu Island Colony. README på engelska, dokumenten här på svenska.
+- Testat: inga fel i 900 speldagar.

@@ -39,7 +39,7 @@ func _process(delta: float) -> void:
 			progress = 1.0
 			built = true
 			if owner_id == Game.player and Game.world:
-				Game.say("%s är färdigbyggd på %s." % [def()["name"], island.display_name], Color(0.7, 0.95, 0.7))
+				Game.say("%s completed on %s." % [def()["name"], island.display_name], Color(0.7, 0.95, 0.7))
 	elif ruined:
 		if Game.time - island.last_attacked > 20.0:
 			hp += max_hp * 0.02 * days
